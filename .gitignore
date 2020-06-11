@@ -1,2 +1,10 @@
 .terraform
 terraform.tfstate*
+
+*.log
+
+*.pem
+
+elastic.yaml
+
+*.lock*

@@ -1,0 +1,19 @@
+keycloak:
+  extraEnv: |
+    - name: X509_CA_BUNDLE
+      value: /var/run/secret/tls/ca.crt
+  extraVolumeMounts: |
+    - name: ca-cert
+      mountPath: /var/run/secret/tls
+  extraVolumes: |
+    - name: ca-cert
+      secret:
+        secretName: app-cert-tls
+  ingress:
+    enabled: true
+    hosts:
+      - auth.haus.net
+    tls:
+      - hosts:
+        - auth.haus.net
+        secretName: app-cert-tls

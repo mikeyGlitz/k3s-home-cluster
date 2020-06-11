@@ -1,0 +1,13 @@
+global:
+  postgresql:
+    postgresqlDatabase: keycloak
+    postgresqlUsername: vault:secret/data/keycloak/credential#db_user
+    postgresqlPassword: vault:secret/data/keycloak/credential#db_password
+
+master:
+  podAnnotations: &annotations
+    'vault.security.banzaicloud.io/vault-addr': 'https://vault.keycloak.svc.cluster.local:8200'
+    'vault.security.banzaicloud.io/vault-tls-secret': 'vault-tls'
+slave:
+  podAnnotations:
+    <<: *annotations

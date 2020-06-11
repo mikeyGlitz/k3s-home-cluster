@@ -37,3 +37,5 @@ $ mkdir -p ~/.terraform.d/plugins && \
     | xargs -n 1 curl -Lo ~/.terraform.d/plugins/terraform-provider-kubectl && \
     chmod +x ~/.terraform.d/plugins/terraform-provider-kubectl
 ```
+
+openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
