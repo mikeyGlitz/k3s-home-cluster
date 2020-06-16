@@ -6,5 +6,7 @@ terraform.tfstate*
 *.pem
 
 elastic.yaml
+kubeless.yaml
 
 *.lock*
+base/cert-manager.yaml

@@ -1,0 +1,13 @@
+keycloak:
+  service:
+    httpsPort: 443
+  ingress:
+    enabled: "true"
+    annotations:
+      cert-manager.io/cluster-issuer: cluster-issuer
+    hosts:
+      - auth.haus.net
+    tls:
+      - hosts:
+        - auth.haus.net
+        secretName: auth-cert-tls

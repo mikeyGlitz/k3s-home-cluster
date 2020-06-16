@@ -1,0 +1,13 @@
+{
+    "folders": [
+        {
+            "path": "./base"
+        },
+        {
+            "path": "./identity-provider"
+        },
+        {
+            "path": "./vaults"
+        }
+    ]
+}
