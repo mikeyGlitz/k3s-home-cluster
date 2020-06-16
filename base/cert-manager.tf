@@ -16,10 +16,6 @@ resource "helm_release" "rel_cert_manager" {
     }
 }
 
-# resource "kubectl_manifest" "mf_cert_manager" {
-#     yaml_body = file("./cert-manager.yaml")
-# }
-
 resource "kubernetes_secret" "sec_ca_pair" {
     metadata {
         namespace = "cert-manager"

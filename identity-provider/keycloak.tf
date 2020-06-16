@@ -71,6 +71,31 @@ resource "kubernetes_secret" "sec_keycloak_pwd" {
     }
 }
 
+resource "kubectl_manifest" "mf_keycloak_cert" {
+  yaml_body = <<YAML
+    apiVersion: cert-manager.io/v1alpha2
+    kind: Certificate
+    metadata:
+        name: keycloak-app-cert
+        namespace: keycloak
+    spec:
+        secretName: keycloak-app-tls
+        dnsNames:
+        - auth.haus.net
+        - app-keycloak-http
+        - app-keycloak-http.keycloak
+        - app-keycloak-http.keycloak.svc
+        - app-keycloak-http.keycloak.svc.cluster
+        - app-keycloak-http.keycloak.svc.cluster.local
+        ipAddresses:
+        - 192.168.0.120
+        - 127.0.0.1
+        issuerRef:
+            name: cluster-issuer
+            kind: ClusterIssuer
+  YAML
+}
+
 resource "helm_release" "rel_keycloak_app" {
     repository = "https://codecentric.github.io/helm-charts"
     chart = "keycloak"
@@ -133,4 +158,6 @@ resource "helm_release" "rel_keycloak_app" {
         name = "keycloak.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
         value = "vault-tls"
     }
+
+    depends_on = [kubectl_manifest.mf_keycloak_cert]
 }

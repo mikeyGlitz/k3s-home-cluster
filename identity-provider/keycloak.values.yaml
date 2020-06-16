@@ -1,13 +1,25 @@
 keycloak:
   service:
     httpsPort: 443
+  extraVolumeMounts: |
+    - name: tls-cert
+      mountPath: /var/run/secret/tls/
+  extraVolumes: |
+    - name: tls-cert
+      secret:
+        secretName: keycloak-app-tls
+  extraEnv: |
+    - name: X509_CA_BUNDLE
+      value: /var/run/secret/tls/ca.crt
   ingress:
     enabled: "true"
     annotations:
+      kubernetes.io/ingress.class: traefik
       cert-manager.io/cluster-issuer: cluster-issuer
+      traefik.ingress.kubernetes.io/redirect-entry-point: https
     hosts:
       - auth.haus.net
     tls:
       - hosts:
         - auth.haus.net
-        secretName: auth-cert-tls
+        secretName: keycloak-app-tls
