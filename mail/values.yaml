@@ -1,0 +1,11 @@
+domain: haus.net
+hostnames:
+- mail.haus.net
+- mail.mailu
+- mail.mailu.svc
+- mail.mailu.svc.cluster
+- mail.mailu.svc.cluster.local
+ingress:
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/redirect-entry-point: https

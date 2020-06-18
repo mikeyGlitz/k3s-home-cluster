@@ -3,3 +3,9 @@ resource "kubernetes_namespace" "ns_keycloak" {
     name = "keycloak"
   }
 }
+
+resource "kubernetes_namespace" "ns_nextcloud" {
+  metadata {
+    name = "nextcloud"
+  }
+}

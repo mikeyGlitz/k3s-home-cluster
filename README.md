@@ -38,4 +38,14 @@ $ mkdir -p ~/.terraform.d/plugins && \
     chmod +x ~/.terraform.d/plugins/terraform-provider-kubectl
 ```
 
+## cert-manager install
+
+Installing cert-manager requires setting up a CA key pair
+
+```bash
 openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+```
+
+# References
+
+- Injecting Vault secrets [https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/](https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/)

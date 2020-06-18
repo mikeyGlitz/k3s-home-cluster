@@ -10,6 +10,11 @@ resource "helm_release" "rel_keycloak_db" {
     }
 
     set {
+        name = "persistence.size"
+        value = "500Mi"
+    }
+
+    set {
         name = "master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
         value = "https://vault.keycloak:8200"
     }
@@ -141,10 +146,6 @@ resource "helm_release" "rel_keycloak_app" {
         name = "keycloak.existingSecretKey"
         value = "app_password"
     }
-    # set {
-    #     name = "keycloak.password"
-    #     value = "vault:secret/data/keycloak/application/credential#app_password"
-    # }
     set {
         name = "keycloak.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
         value = "https://vault.keycloak:8200"

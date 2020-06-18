@@ -1,9 +1,9 @@
+### Keycloak RBAC ###
 resource "kubernetes_service_account" "sa_keycloak" {
     metadata {
         name = "keycloak"
         namespace = "keycloak"
     }
-    # automount_service_account_token = true
 }
 
 resource "kubernetes_role" "role_keycloak" {
@@ -36,7 +36,45 @@ resource "kubernetes_role_binding" "rb_keycloak" {
     }
 }
 
-resource "kubernetes_cluster_role_binding" "crb_keycloak" {
+### OwnCloud RBAC ###
+resource "kubernetes_service_account" "sa_nextcloud" {
+    metadata {
+        name = "nextcloud"
+        namespace = "nextcloud"
+    }
+}
+
+resource "kubernetes_role" "role_nextcloud" {
+    metadata {
+        name = "vault-secrets"
+        namespace = "nextcloud"
+    }
+    rule {
+        api_groups = [""]
+        resources = [ "secrets" ]
+        verbs = ["*"]
+    }
+}
+
+resource "kubernetes_role_binding" "rb_nextcloud" {
+    metadata {
+        name = "vault-secrets"
+        namespace = "nextcloud"
+    }
+    role_ref {
+        api_group = "rbac.authorization.k8s.io"
+        kind = "Role"
+        name = "vault-secrets"
+    }
+
+    subject {
+        kind = "ServiceAccount"
+        name = "nextcloud"
+        namespace = "nextcloud"
+    }
+}
+
+resource "kubernetes_cluster_role_binding" "crb_vault" {
     metadata {
         name = "vault-auth-delegator"
     }
@@ -50,5 +88,10 @@ resource "kubernetes_cluster_role_binding" "crb_keycloak" {
         kind = "ServiceAccount"
         name = "keycloak"
         namespace = "keycloak"
+    }
+    subject {
+        kind = "ServiceAccount"
+        name = "nextcloud"
+        namespace = "nextcloud"
     }
 }

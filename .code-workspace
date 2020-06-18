@@ -8,6 +8,12 @@
         },
         {
             "path": "./vaults"
+        },
+        {
+            "path": "mail"
+        },
+        {
+            "path": "./nextcloud"
         }
     ]
 }

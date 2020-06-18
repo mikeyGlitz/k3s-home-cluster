@@ -1,0 +1,19 @@
+master:
+  persistence:
+    size: 2Gi
+  annotations:
+    vault.security.banzaicloud.io/vault-addr: https://vault.nextcloud:8200
+    vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+    vault.security.banzaicloud.io/vault-role: default
+slave:
+  persistence:
+    size: 2Gi
+  annotations:
+    vault.security.banzaicloud.io/vault-addr: https://vault.nextcloud:8200
+    vault.security.banzaicloud.io/vault-tls-secret: vault-tls
+    vault.security.banzaicloud.io/vault-role: default
+
+db:
+  name: nextcloud
+  user: vault:secret/data/nextcloud/database/credential#db_user
+  password: vault:secret/data/nextcloud/database/credential#db_password

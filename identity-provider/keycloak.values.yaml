@@ -17,6 +17,7 @@ keycloak:
       kubernetes.io/ingress.class: traefik
       cert-manager.io/cluster-issuer: cluster-issuer
       traefik.ingress.kubernetes.io/redirect-entry-point: https
+      traefik.frontend.passHostHeader: "true"
     hosts:
       - auth.haus.net
     tls:
