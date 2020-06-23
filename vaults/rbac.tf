@@ -74,6 +74,43 @@ resource "kubernetes_role_binding" "rb_nextcloud" {
     }
 }
 
+### LDAP RBAC ###
+resource "kubernetes_service_account" "sa_ldap" {
+    metadata {
+        name = "ldap"
+        namespace = "ldap"
+    }
+}
+
+resource "kubernetes_role" "role_ldap" {
+    metadata {
+        name = "vault-secrets"
+        namespace = "ldap"
+    }
+    rule {
+        api_groups = [""]
+        resources = [ "secrets" ]
+        verbs = ["*"]
+    }
+}
+
+resource "kubernetes_role_binding" "rb_ldap" {
+    metadata {
+        name = "vault-secrets"
+        namespace = "ldap"
+    }
+    role_ref {
+        api_group = "rbac.authorization.k8s.io"
+        kind = "Role"
+        name = "vault-secrets"
+    }
+
+    subject {
+        kind = "ServiceAccount"
+        name = "ldap"
+        namespace = "ldap"
+    }
+}
 resource "kubernetes_cluster_role_binding" "crb_vault" {
     metadata {
         name = "vault-auth-delegator"
@@ -93,5 +130,10 @@ resource "kubernetes_cluster_role_binding" "crb_vault" {
         kind = "ServiceAccount"
         name = "nextcloud"
         namespace = "nextcloud"
+    }
+    subject {
+        kind = "ServiceAccount"
+        name = "ldap"
+        namespace = "ldap"
     }
 }

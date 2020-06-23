@@ -9,3 +9,8 @@ resource "kubernetes_namespace" "ns_nextcloud" {
     name = "nextcloud"
   }
 }
+resource "kubernetes_namespace" "ns_ldap" {
+  metadata {
+    name = "ldap"
+  }
+}

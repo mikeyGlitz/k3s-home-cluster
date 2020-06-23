@@ -16,6 +16,14 @@ data "template_file" "temp_nextcloud_vault" {
     }
 }
 
+data "template_file" "temp_ldap_vault" {
+    template = file("./vault.yaml")
+    vars = {
+        namespace = "ldap"
+        account = "ldap"
+    }
+}
+
 resource "kubectl_manifest" "mf_keycloak_vault" {
     yaml_body = data.template_file.temp_keycloak_vault.rendered
 
@@ -35,5 +43,15 @@ resource "kubectl_manifest" "mf_nextcloud_vault" {
         kubernetes_role_binding.rb_nextcloud,
         kubernetes_role.role_nextcloud,
         kubernetes_service_account.sa_nextcloud
+        ]
+}
+resource "kubectl_manifest" "mf_ldap_vault" {
+    yaml_body = data.template_file.temp_ldap_vault.rendered
+
+    depends_on = [
+        kubernetes_cluster_role_binding.crb_vault,
+        kubernetes_role_binding.rb_ldap,
+        kubernetes_role.role_ldap,
+        kubernetes_service_account.sa_ldap
         ]
 }

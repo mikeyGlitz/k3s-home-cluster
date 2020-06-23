@@ -1,29 +1,4 @@
-resource "helm_release" "rel_nextcloud_db" {
-  repository = "https://charts.bitnami.com/bitnami"
-  chart = "mariadb"
-  name = "db"
-  namespace = "nextcloud"
-
-  values = [file("./db.values.yaml")]
-}
-
-resource "kubernetes_persistent_volume_claim" "pvc_nextcloud" {
-  metadata {
-    name = "nextcloud-storage"
-    namespace = "nextcloud"
-  }
-  spec {
-    access_modes = ["ReadWriteMany"]
-    storage_class_name = "nfs"
-    resources {
-      requests = {
-        "storage" = "5Gi"
-      }
-    }
-  }
-}
-
-resource "kubectl_manifest" "mf_keycloak_cert" {
+resource "kubectl_manifest" "mf_nextcloud_cert" {
   yaml_body = <<YAML
     apiVersion: cert-manager.io/v1alpha2
     kind: Certificate
@@ -49,23 +24,23 @@ resource "kubectl_manifest" "mf_keycloak_cert" {
 }
 
 resource "helm_release" "rel_nextcloud" {
-  repository = "https://kubernetes-charts.storage.googleapis.com"
-  chart = "nextcloud"
-  name = "app"
+  repository = "https://charts.bitnami.com/bitnami"
+  chart = "owncloud"
+  name = "files"
   namespace = "nextcloud"
 
   values = [file("./nextcloud.values.yaml")]
 
   set {
-    name = "nextcloud.host"
+    name = "owncloudHost"
     value = "files.haus.net"
   }
   set {
-    name = "nextcloud.username"
+    name = "owncloudUsername"
     value = "vault:secret/data/nextcloud/application/credential#app_user"
   }
   set {
-    name = "nextcloud.password"
+    name = "owncloudPassword"
     value = "vault:secret/data/nextcloud/application/credential#app_password"
   }
   set {
@@ -81,36 +56,111 @@ resource "helm_release" "rel_nextcloud" {
     value = "default"
   }
   set {
-    name = "internalDatabase.enabled"
-    value = "false"
-  }
-  set {
-    name = "externalDatabase.user"
-    value = "vault:secret/data/nextcloud/database/credential#db_user"
-  }
-  set {
-    name = "externalDatabase.password"
-    value = "vault:secret/data/nextcloud/database/credential#db_password"
-  }
-  set {
-    name = "externalDatabase.enabled"
-    value = "true"
-  }
-  set {
-    name = "externalDatabase.host"
-    value = "db-mariadb"
-  }
-  set {
-    name = "externalDatabase.database"
-    value = "nextcloud"
-  }
-  set {
     name = "persistence.enabled"
     value = "true"
   }
   set {
-    name = "persistence.existingClaim"
-    value = "nextcloud-storage"
+    name = "persistence.owncloud.storageClass"
+    value = "nfs-client"
   }
-  depends_on = [helm_release.rel_nextcloud_db]
+  set {
+    name = "persistence.owncloud.size"
+    value = "1Ti"
+  }
+  set {
+    name = "service.type"
+    value = "ClusterIP"
+  }
+  set {
+    name = "mariadb.replication.enabled"
+    value = "true"
+  }
+  set {
+    name = "mariadb.db.user"
+    value = "vault:secret/data/nextcloud/database/credential#db_user"
+  }
+  set {
+    name = "mariadb.db.password"
+    value = "vault:secret/data/nextcloud/database/credential#db_password"
+  }
+  set {
+    name = "mariadb.master.persistence.enabled"
+    value = "true"
+  }
+  set {
+    name = "mariadb.master.persistence.size"
+    value = "1Gi"
+  }
+  set {
+    name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+    value = "default"
+  }
+  set {
+    name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+    value = "https://vault.nextcloud:8200"
+  }
+  set {
+    name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+    value = "vault-tls"
+  }
+  set {
+    name = "mariadb.master.persistence.enabled"
+    value = "true"
+  }
+  set {
+    name = "mariadb.master.persistence.size"
+    value = "1Gi"
+  }
+  set {
+    name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+    value = "default"
+  }
+  set {
+    name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+    value = "https://vault.nextcloud:8200"
+  }
+  set {
+    name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+    value = "vault-tls"
+  }
+  set {
+    name = "mariadb.slave.persistence.enabled"
+    value = "true"
+  }
+  set {
+    name = "mariadb.slave.persistence.size"
+    value = "1Gi"
+  }
+  set {
+    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+    value = "default"
+  }
+  set {
+    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+    value = "https://vault.nextcloud:8200"
+  }
+  set {
+    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+    value = "vault-tls"
+  }
+  set {
+    name = "mariadb.slave.persistence.enabled"
+    value = "true"
+  }
+  set {
+    name = "mariadb.slave.persistence.size"
+    value = "1Gi"
+  }
+  set {
+    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+    value = "default"
+  }
+  set {
+    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+    value = "https://vault.nextcloud:8200"
+  }
+  set {
+    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+    value = "vault-tls"
+  }
 }

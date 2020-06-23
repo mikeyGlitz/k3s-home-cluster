@@ -36,22 +36,6 @@ resource "helm_release" "rel_mailu_db" {
     }
 }
 
-resource "kubernetes_persistent_volume_claim" "pvc_mailu" {
-  metadata {
-    name = "mailu-storage"
-    namespace = "mailu"
-  }
-  spec {
-    access_modes = ["ReadWriteMany"]
-    storage_class_name = "nfs"
-    resources {
-        requests = {
-          "storage" = "2Gi"
-        }
-    }
-  }
-}
-
 resource "random_uuid" "rand_enc_key" {}
 
 resource "helm_release" "rel_mailu" {
@@ -63,9 +47,14 @@ resource "helm_release" "rel_mailu" {
   values = [file("./values.yaml")]
 
   set {
-      name = "persistence.existingClaim"
-      value = "mailu-storage"
+      name = "persistence.storageClass"
+      value = "nfs-client"
   }
+
+#   set {
+#       name = "persistence.size"
+#       value = "10Gi"
+#   }
 
   set {
       name = "clamav.enabled"

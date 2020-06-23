@@ -5,7 +5,7 @@ ingress:
     cert-manager.io/cluster-issuer: cluster-issuer
     traefik.ingress.kubernetes.io/redirect-entry-point: https
     traefik.frontend.passHostHeader: "true"
-  tls:
-    - hosts:
-      - files.haus.net
-      secretName: nextcloud-app-tls
+  hosts:
+    - name: files.haus.net
+      tls: true
+      tlsSecret: nextcloud-app-tls
