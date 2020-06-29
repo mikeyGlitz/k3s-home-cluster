@@ -9,7 +9,7 @@ variable "database_user" {
 
 variable "mailu_user" {
     type = string
-    default = "mailu"
+    default = "manager"
 }
 
 variable "mailu_password" {

@@ -34,8 +34,8 @@ resource "kubernetes_secret" "sec_ldap_pass" {
     }
   }
   data = {
-    "LDAP_CONFIG_PASSWORD" = "vault:secret/data/ldap/config/credentials#config_password"
-    "LDAP_ADMIN_PASSWORD" = "vault:secret/data/ldap/admin/credentials#admin_password"
+    "LDAP_CONFIG_PASSWORD" = "vault:secret/data/ldap/config/credential#config_password"
+    "LDAP_ADMIN_PASSWORD" = "vault:secret/data/ldap/admin/credential#admin_password"
   }
 }
 

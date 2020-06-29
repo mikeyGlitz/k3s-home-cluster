@@ -5,6 +5,14 @@ resource "helm_release" "rel_nfs" {
   namespace = "nas"
   create_namespace = true
 
+  values = [
+    <<YAML
+      nfs:
+        mountOptions:
+        - nfsvers=4
+    YAML
+  ]
+
   set {
     name = "nfs.server"
     value = "172.16.0.1"

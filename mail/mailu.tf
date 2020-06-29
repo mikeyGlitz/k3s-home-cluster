@@ -44,22 +44,45 @@ resource "helm_release" "rel_mailu" {
   name = "mail"
   namespace = "mailu"
 
-  values = [file("./values.yaml")]
+   values = [
+       <<YAML
+        hostnames:
+        - mail.haus.net
+        initialAccount:
+          password: '${var.mailu_password}'
+       YAML
+   ]
+
+  set {
+      name = "domain"
+      value = "haus.net"
+  }
+
+  set {
+      name = "ingress.annotations.kubernetes\\.io/ingress\\.class"
+      value = "traefik"
+  }
+
+  set {
+      name = "ingress.annotations.traefik\\.ingress\\.kubernetes\\.io/redirect-entry-point"
+      value = "https"
+  }
 
   set {
       name = "persistence.storageClass"
       value = "nfs-client"
   }
 
-#   set {
-#       name = "persistence.size"
-#       value = "10Gi"
-#   }
+  set {
+      name = "persistence.accessMode"
+      value = "ReadWriteMany"
+  }
 
   set {
       name = "clamav.enabled"
       value = "false"
   }
+
   set {
       name = "initialAccount.domain"
       value = "haus.net"
@@ -68,11 +91,6 @@ resource "helm_release" "rel_mailu" {
   set {
       name = "initialAccount.username"
       value = var.mailu_user
-  }
-
-  set {
-      name = "initialAccount.password"
-      value = var.mailu_password
   }
 
   set {

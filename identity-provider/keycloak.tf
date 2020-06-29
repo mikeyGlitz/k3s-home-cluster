@@ -58,6 +58,20 @@ resource "helm_release" "rel_keycloak_db" {
         name = "global.postgresql.postgresqlPassword"
         value = "vault:secret/data/keycloak/database/credential#db_password"
     }
+    set {
+        name = "metrics.enabled"
+        value = "true"
+    }
+
+    set {
+        name = "metrics.serviceMonitor.enabled"
+        value = "true"
+    }
+
+    set {
+        name = "metrics.serviceMonitor.namespace"
+        value = "keycloak"
+    }
 }
 
 resource "kubernetes_secret" "sec_keycloak_pwd" {
@@ -159,6 +173,11 @@ resource "helm_release" "rel_keycloak_app" {
         name = "keycloak.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
         value = "vault-tls"
     }
+
+    # set {
+    #     name = "prometheus.operator.enabled"
+    #     value = "true"
+    # }
 
     depends_on = [kubectl_manifest.mf_keycloak_cert]
 }

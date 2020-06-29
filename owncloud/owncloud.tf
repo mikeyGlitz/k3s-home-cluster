@@ -1,19 +1,19 @@
-resource "kubectl_manifest" "mf_nextcloud_cert" {
+resource "kubectl_manifest" "mf_owncloud_cert" {
   yaml_body = <<YAML
     apiVersion: cert-manager.io/v1alpha2
     kind: Certificate
     metadata:
-        name: nextcloud-app-cert
-        namespace: nextcloud
+        name: owncloud-app-cert
+        namespace: owncloud
     spec:
-        secretName: nextcloud-app-tls
+        secretName: owncloud-app-tls
         dnsNames:
         - files.haus.net
-        - nextcloud
-        - nextcloud.owncloud
-        - nextcloud.owncloud.svc
-        - nextcloud.owncloud.svc.cluster
-        - nextcloud.owncloud.svc.cluster.local
+        - files-owncloud
+        - files-owncloud.owncloud
+        - files-owncloud.owncloud.svc
+        - files-owncloud.owncloud.svc.cluster
+        - files-owncloud.owncloud.svc.cluster.local
         ipAddresses:
         - 192.168.0.120
         - 127.0.0.1
@@ -23,13 +23,13 @@ resource "kubectl_manifest" "mf_nextcloud_cert" {
   YAML
 }
 
-resource "helm_release" "rel_nextcloud" {
+resource "helm_release" "rel_owncloud" {
   repository = "https://charts.bitnami.com/bitnami"
   chart = "owncloud"
   name = "files"
-  namespace = "nextcloud"
+  namespace = "owncloud"
 
-  values = [file("./nextcloud.values.yaml")]
+  values = [file("./owncloud.values.yaml")]
 
   set {
     name = "owncloudHost"
@@ -37,15 +37,15 @@ resource "helm_release" "rel_nextcloud" {
   }
   set {
     name = "owncloudUsername"
-    value = "vault:secret/data/nextcloud/application/credential#app_user"
+    value = "vault:secret/data/owncloud/application/credential#app_user"
   }
   set {
     name = "owncloudPassword"
-    value = "vault:secret/data/nextcloud/application/credential#app_password"
+    value = "vault:secret/data/owncloud/application/credential#app_password"
   }
   set {
     name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-    value = "https://vault.nextcloud:8200"
+    value = "https://vault.owncloud:8200"
   }
   set {
     name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
@@ -65,7 +65,7 @@ resource "helm_release" "rel_nextcloud" {
   }
   set {
     name = "persistence.owncloud.size"
-    value = "1Ti"
+    value = "2Ti"
   }
   set {
     name = "service.type"
@@ -77,11 +77,11 @@ resource "helm_release" "rel_nextcloud" {
   }
   set {
     name = "mariadb.db.user"
-    value = "vault:secret/data/nextcloud/database/credential#db_user"
+    value = "vault:secret/data/owncloud/database/credential#db_user"
   }
   set {
     name = "mariadb.db.password"
-    value = "vault:secret/data/nextcloud/database/credential#db_password"
+    value = "vault:secret/data/owncloud/database/credential#db_password"
   }
   set {
     name = "mariadb.master.persistence.enabled"
@@ -97,7 +97,7 @@ resource "helm_release" "rel_nextcloud" {
   }
   set {
     name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-    value = "https://vault.nextcloud:8200"
+    value = "https://vault.owncloud:8200"
   }
   set {
     name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
@@ -117,7 +117,7 @@ resource "helm_release" "rel_nextcloud" {
   }
   set {
     name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-    value = "https://vault.nextcloud:8200"
+    value = "https://vault.owncloud:8200"
   }
   set {
     name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
@@ -137,7 +137,7 @@ resource "helm_release" "rel_nextcloud" {
   }
   set {
     name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-    value = "https://vault.nextcloud:8200"
+    value = "https://vault.owncloud:8200"
   }
   set {
     name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
@@ -157,7 +157,7 @@ resource "helm_release" "rel_nextcloud" {
   }
   set {
     name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-    value = "https://vault.nextcloud:8200"
+    value = "https://vault.owncloud:8200"
   }
   set {
     name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"

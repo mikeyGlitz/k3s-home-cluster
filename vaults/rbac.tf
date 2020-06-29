@@ -37,17 +37,17 @@ resource "kubernetes_role_binding" "rb_keycloak" {
 }
 
 ### OwnCloud RBAC ###
-resource "kubernetes_service_account" "sa_nextcloud" {
+resource "kubernetes_service_account" "sa_owncloud" {
     metadata {
-        name = "nextcloud"
-        namespace = "nextcloud"
+        name = "owncloud"
+        namespace = "owncloud"
     }
 }
 
-resource "kubernetes_role" "role_nextcloud" {
+resource "kubernetes_role" "role_owncloud" {
     metadata {
         name = "vault-secrets"
-        namespace = "nextcloud"
+        namespace = "owncloud"
     }
     rule {
         api_groups = [""]
@@ -56,10 +56,10 @@ resource "kubernetes_role" "role_nextcloud" {
     }
 }
 
-resource "kubernetes_role_binding" "rb_nextcloud" {
+resource "kubernetes_role_binding" "rb_owncloud" {
     metadata {
         name = "vault-secrets"
-        namespace = "nextcloud"
+        namespace = "owncloud"
     }
     role_ref {
         api_group = "rbac.authorization.k8s.io"
@@ -69,8 +69,8 @@ resource "kubernetes_role_binding" "rb_nextcloud" {
 
     subject {
         kind = "ServiceAccount"
-        name = "nextcloud"
-        namespace = "nextcloud"
+        name = "owncloud"
+        namespace = "owncloud"
     }
 }
 
@@ -128,8 +128,8 @@ resource "kubernetes_cluster_role_binding" "crb_vault" {
     }
     subject {
         kind = "ServiceAccount"
-        name = "nextcloud"
-        namespace = "nextcloud"
+        name = "owncloud"
+        namespace = "owncloud"
     }
     subject {
         kind = "ServiceAccount"

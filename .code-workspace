@@ -13,10 +13,13 @@
             "path": "mail"
         },
         {
-            "path": "./nextcloud"
+            "path": "./owncloud"
         },
         {
             "path": "./ldap"
+        },
+        {
+            "path": "./manifests"
         }
     ]
 }

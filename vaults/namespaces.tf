@@ -4,9 +4,9 @@ resource "kubernetes_namespace" "ns_keycloak" {
   }
 }
 
-resource "kubernetes_namespace" "ns_nextcloud" {
+resource "kubernetes_namespace" "ns_owncloud" {
   metadata {
-    name = "nextcloud"
+    name = "owncloud"
   }
 }
 resource "kubernetes_namespace" "ns_ldap" {

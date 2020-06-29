@@ -22,7 +22,7 @@ resource "kubernetes_secret" "sec_ca_pair" {
         name = "ca-pair"
     }
     data = {
-        "tls.crt" = file("./certificate.pem")
+        "tls.crt" = file("./certificate.crt")
         "tls.key" = file("./key.pem")
     }
 }
