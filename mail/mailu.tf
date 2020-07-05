@@ -1,4 +1,4 @@
-resource "kubernetes_namespace" "ns_mailu"{
+resource "kubernetes_namespace" "ns_mailu" {
     metadata {
         name = "mailu"
     }
@@ -16,8 +16,8 @@ resource "helm_release" "rel_mailu_db" {
     }
 
     set {
-        name = "slave.persistence.size"
-        value = "2Gi"
+        name = "replication.enabled"
+        value = "false"
     }
 
     set {

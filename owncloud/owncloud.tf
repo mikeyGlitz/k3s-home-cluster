@@ -72,10 +72,6 @@ resource "helm_release" "rel_owncloud" {
     value = "ClusterIP"
   }
   set {
-    name = "mariadb.replication.enabled"
-    value = "true"
-  }
-  set {
     name = "mariadb.db.user"
     value = "vault:secret/data/owncloud/database/credential#db_user"
   }
@@ -121,46 +117,6 @@ resource "helm_release" "rel_owncloud" {
   }
   set {
     name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
-    value = "vault-tls"
-  }
-  set {
-    name = "mariadb.slave.persistence.enabled"
-    value = "true"
-  }
-  set {
-    name = "mariadb.slave.persistence.size"
-    value = "1Gi"
-  }
-  set {
-    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-role"
-    value = "default"
-  }
-  set {
-    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-    value = "https://vault.owncloud:8200"
-  }
-  set {
-    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
-    value = "vault-tls"
-  }
-  set {
-    name = "mariadb.slave.persistence.enabled"
-    value = "true"
-  }
-  set {
-    name = "mariadb.slave.persistence.size"
-    value = "1Gi"
-  }
-  set {
-    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-role"
-    value = "default"
-  }
-  set {
-    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-    value = "https://vault.owncloud:8200"
-  }
-  set {
-    name = "mariadb.slave.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
     value = "vault-tls"
   }
 }

@@ -46,6 +46,15 @@ Installing cert-manager requires setting up a CA key pair
 openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
 ```
 
+## Linkerd
+
+Linkerd requires certificates created with ecdsa encryption
+
+```bash
+openssl ecparam -genkey -name prime256v1 -noout -out key.pem
+openssl req -new -x509 -key key.pem -out ca.crt -days 370
+```
+
 # References
 
 - Injecting Vault secrets [https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/](https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/)

@@ -111,6 +111,83 @@ resource "kubernetes_role_binding" "rb_ldap" {
         namespace = "ldap"
     }
 }
+### Logging RBAC ###
+resource "kubernetes_service_account" "sa_logging" {
+    metadata {
+        name = "logging"
+        namespace = "logging"
+    }
+}
+
+resource "kubernetes_role" "role_logging" {
+    metadata {
+        name = "vault-secrets"
+        namespace = "logging"
+    }
+    rule {
+        api_groups = [""]
+        resources = [ "secrets" ]
+        verbs = ["*"]
+    }
+}
+
+resource "kubernetes_role_binding" "rb_logging" {
+    metadata {
+        name = "vault-secrets"
+        namespace = "logging"
+    }
+    role_ref {
+        api_group = "rbac.authorization.k8s.io"
+        kind = "Role"
+        name = "vault-secrets"
+    }
+
+    subject {
+        kind = "ServiceAccount"
+        name = "logging"
+        namespace = "logging"
+    }
+}
+
+### linkerd RBAC ###
+resource "kubernetes_service_account" "sa_linkerd" {
+    metadata {
+        name = "linkerd"
+        namespace = "linkerd"
+    }
+}
+
+resource "kubernetes_role" "role_linkerd" {
+    metadata {
+        name = "vault-secrets"
+        namespace = "linkerd"
+    }
+    rule {
+        api_groups = [""]
+        resources = [ "secrets" ]
+        verbs = ["*"]
+    }
+}
+
+resource "kubernetes_role_binding" "rb_linkerd" {
+    metadata {
+        name = "vault-secrets"
+        namespace = "linkerd"
+    }
+    role_ref {
+        api_group = "rbac.authorization.k8s.io"
+        kind = "Role"
+        name = "vault-secrets"
+    }
+
+    subject {
+        kind = "ServiceAccount"
+        name = "linkerd"
+        namespace = "linkerd"
+    }
+}
+
+### ClusterRoleBinding ###
 resource "kubernetes_cluster_role_binding" "crb_vault" {
     metadata {
         name = "vault-auth-delegator"
@@ -135,5 +212,15 @@ resource "kubernetes_cluster_role_binding" "crb_vault" {
         kind = "ServiceAccount"
         name = "ldap"
         namespace = "ldap"
+    }
+    subject {
+        kind = "ServiceAccount"
+        name = "logging"
+        namespace = "logging"
+    }
+    subject {
+        kind = "ServiceAccount"
+        name = "linkerd"
+        namespace = "linkerd"
     }
 }

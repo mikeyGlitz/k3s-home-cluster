@@ -1,9 +1,17 @@
+resource "kubernetes_namespace" "ns_nfs" {
+  metadata {
+    name = "nas"
+    annotations = {
+      "linkerd.io/inject" = "enabled"
+    }
+  }
+}
+
 resource "helm_release" "rel_nfs" {
   repository = "https://kubernetes-charts.storage.googleapis.com"
   chart = "nfs-client-provisioner"
   name = "nfs-server"
   namespace = "nas"
-  create_namespace = true
 
   values = [
     <<YAML

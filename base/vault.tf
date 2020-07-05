@@ -12,6 +12,7 @@ resource "helm_release" "rel_vault_operator" {
     chart = "vault-operator"
     name = "vault-operator"
     namespace = "vault-infra"
+    version = "1.3.2"
 }
 
 resource "helm_release" "rel_vault_webhook" {
@@ -28,6 +29,5 @@ resource "helm_release" "rel_vault_webhook" {
         name = "certificate.useCertManager"
         value = "true"
     }
-
-    depends_on = [kubectl_manifest.mf_cert_issuer]
+    version = "1.3.2"
 }

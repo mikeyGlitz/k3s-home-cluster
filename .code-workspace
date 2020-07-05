@@ -20,6 +20,15 @@
         },
         {
             "path": "./manifests"
-        }
+        },
+        {
+            "path": "./logging"
+        },
+        {
+            "path": "./certs"
+        },
+        {
+            "path": "./mesh"
+        },
     ]
 }
