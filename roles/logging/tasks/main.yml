@@ -1,0 +1,35 @@
+---
+- name: Create project folder
+  file:
+    path: "/home/{{ ansible_user }}/terraform/logging"
+    state: directory
+    mode: 0755
+- name: Deploy logging apparatus
+  block:
+    - copy: src="{{ item }}" dest="/home/{{ ansible_user }}/terraform/logging/{{ item }}"
+      with_items:
+      - logging.tf
+      - terraform.tf
+    - stat:
+        path: "terraform/logging/.terraform"
+      register: terraform_initialized
+    - shell:
+        cmd: terraform init
+        chdir: "terraform/logging"
+      when: terraform_initialized.stat.exists != true
+    - name: Plan Deployment
+      terraform:
+        project_path: terraform/logging
+        state: planned
+        plan_file: plan.out
+      register: terraform_plan
+    - name: Apply Deployment
+      terraform:
+        project_path: terraform/logging
+        state: present
+        plan_file: plan.out
+      register: terraform_apply
+    - debug: msg="{{ terraform_apply.stdout }}"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+- import_tasks: elastic.yml

@@ -1,0 +1,5 @@
+---
+ca_domain: haus.net
+ca_commonname: "ca.{{ca_domain}}"
+ca_country: US
+ca_state: virginia

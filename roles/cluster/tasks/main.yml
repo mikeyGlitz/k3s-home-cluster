@@ -1,0 +1,51 @@
+---
+- name: Install base packages
+  apt:
+    name:
+      - sshpass
+      - python3-pip
+      - unzip
+      - curl
+    state: present
+- name: Ensure local bin
+  file: path="/home/{{ ansible_user }}/.local/bin" state=directory
+- name: Install python packages
+  pip:
+    name:
+      - ansible
+      - netaddr
+      - openshift
+      - hvac
+    state: present
+    executable: pip3 # not required. The explicit executable or a pathname to the executable to be used to run pip for a specific version of Python installed in the system. For example C(pip-3.3), if there are both Python 2.7 and 3.3 installations in the system and you want to run pip for the Python 3.3 installation. It cannot be specified together with the 'virtualenv' parameter (added in 2.1). By default, it will take the appropriate version for the python interpreter use by ansible, e.g. pip3 on python 3, and pip2 or pip on python 2.
+- name: Install Terraform
+  block:
+  - unarchive:
+      src: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip" # required. If C(remote_src=no) (default), local path to archive file to copy to the target server; can be absolute or relative. If C(remote_src=yes), path on the target server to existing archive file to unpack.,If C(remote_src=yes) and C(src) contains C(://), the remote machine will download the file from the URL first. (version_added 2.0). This is only for simple cases, for full download support use the M(get_url) module.
+      dest: "/usr/local/bin" # required. Remote absolute path where the archive should be unpacked.
+      mode: 755
+      remote_src: yes
+- name: Install kubectl provider
+  block:
+  - file:
+      path: "/home/{{ ansible_user }}/.terraform.d/plugins/linux_amd64"
+      state: directory
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      mode: 0755
+  - unarchive:
+      src: "https://github.com/gavinbunney/terraform-provider-kubectl/releases/download/v{{ kubectl_version }}/terraform-provider-kubectl_{{ kubectl_version }}_linux_amd64.zip"
+      dest: "/home/{{ ansible_user }}/.terraform.d/plugins/linux_amd64"
+      remote_src: yes
+      mode: 0755
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+  - shell: "mv /home/{{ ansible_user }}/.terraform.d/plugins/linux_amd64/terraform-provider-kubectl_v{{ kubectl_version }} /home/{{ ansible_user }}/.terraform.d/plugins/linux_amd64/terraform-provider-kubectl"
+- name: Set up Terraform Project folder
+  file:
+    path: "/home/{{ ansible_user }}/terraform" 
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0755
+- import_tasks: initializer.yml

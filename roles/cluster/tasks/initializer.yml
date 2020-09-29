@@ -1,0 +1,32 @@
+---
+- name: Copy playbook
+  copy:
+      dest: "/home/{{ ansible_user }}/playbook.yml" # required. Remote absolute path where the file should be copied to. If I(src) is a directory, this must be a directory too. If I(dest) is a nonexistent path and if either I(dest) ends with "/" or I(src) is a directory, I(dest) is created. If I(src) and I(dest) are files, the parent directory of I(dest) isn't created: the task fails if it doesn't already exist.
+      src: "playbook.yml" # not required. Local path to a file to copy to the remote server; can be absolute or relative. If path is a directory, it is copied recursively. In this case, if path ends with "/", only inside contents of that directory are copied to destination. Otherwise, if it does not end with "/", the directory itself with all contents is copied. This behavior is similar to Rsync.
+      owner: "{{ ansible_user }}" # not required. Name of the user that should own the file/directory, as would be fed to I(chown).
+- name: Get IP addresses
+  shell: arp | grep 172 | awk '{print $1}' | tr -d '()' | tr '\n' ','
+  register: cluster_ips
+- debug: msg="ansible-playbook -i 172.16.0.1,{{ cluster_ips.stdout_lines[0] }} /home/{{ ansible_user }}/playbook.yml"
+- name: Execute playbook
+  become: no
+  command: "ansible-playbook -i 172.16.0.1,{{ cluster_ips.stdout_lines[0] }} /home/{{ ansible_user }}/playbook.yml"
+  register: playbook_execution
+- debug: msg="{{ playbook_execution.stdout }}"
+- name: Install k3s
+  become: no
+  block:
+    - shell: arp | grep 172 | awk '{print $1}' | tr -d '()'
+      register: cluster_ips
+    - shell:
+        cmd: |
+          curl -sLS https://get.k3sup.dev | sh
+          sudo install k3sup /usr/local/bin/
+    - name: Install Master Node
+      shell: k3sup install --ip 192.168.0.120 --user manager --k3s-extra-args '--docker'
+    - name: Install Agents
+      shell: "k3sup join --server-ip 192.168.0.120 --ip {{ item }} --user manager --k3s-extra-args '--docker'"
+      with_items: "{{ cluster_ips.stdout_lines }}"
+    - shell: "cat /home/{{ ansible_user }}/kubeconfig"
+      register: kube_config
+    - debug: msg="{{ kube_config.stdout }}"

@@ -1,0 +1,51 @@
+---
+- name: Create project folder
+  file:
+    path: "/home/{{ ansible_user }}/terraform/vault"
+    state: directory
+    mode: 0755
+- name: Deploy Vault Operator
+  block:
+    - copy: src="{{ item }}" dest="/home/{{ ansible_user }}/terraform/vault/{{ item }}"
+      with_items:
+      - vault.tf
+      - terraform.tf
+    - stat:
+        path: "terraform/vault/.terraform"
+      register: terraform_initialized
+    - shell:
+        cmd: terraform init
+        chdir: "terraform/vault"
+      when: terraform_initialized.stat.exists != true
+    - name: Plan Deployment
+      terraform:
+        project_path: terraform/vault
+        state: planned
+        plan_file: plan.out
+    - name: Apply Deployment
+      terraform:
+        project_path: terraform/vault
+        state: present
+        plan_file: plan.out
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+- import_tasks: vault.yml
+- import_tasks: monitoring.yml
+- name: Get certificate from secret
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+  shell: "kubectl get secret -n vault-system vault-tls -o jsonpath=\"{.data.ca\\.crt}\" | base64 --decode > /home/{{ ansible_user }}/vault.crt"
+- name: Set up Vault
+  become: yes
+  block:
+    - name: Add vault apt-key
+      apt_key:
+          url: https://apt.releases.hashicorp.com/gpg # not required. The URL to retrieve key from.
+    - name: Add apt repository
+      apt_repository:
+          repo: deb [arch=amd64] https://apt.releases.hashicorp.com focal main # required. A source string for the repository.
+          state: present # not required. choices: absent;present. A source string state.
+          update_cache: yes # not required. Run the equivalent of C(apt-get update) when a change occurs.  Cache updates are run after making changes.
+          filename: vault.list # not required. Sets the name of the source list file in sources.list.d. Defaults to a file name based on the repository source url. The .list extension will be automatically added.
+    - name: Install vault CLI
+      apt: name=vault state=present

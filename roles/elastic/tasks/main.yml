@@ -1,0 +1,34 @@
+---
+- name: Create project folder
+  file:
+    path: "/home/{{ ansible_user }}/terraform/elastic"
+    state: directory
+    mode: 0755
+- name: Deploy Elasticsearch
+  block:
+    - copy: src="{{ item }}" dest="/home/{{ ansible_user }}/terraform/elastic/{{ item }}"
+      with_items:
+      - elastic.tf
+      - terraform.tf
+    - shell:
+        cmd: "/home/{{ansible_user}}/.linkerd2/bin/linkerd inject https://download.elastic.co/downloads/eck/{{ eck_version }}/all-in-one.yaml > elastic.yaml"
+        chdir: terraform/elastic
+    - stat:
+        path: "terraform/elastic/.terraform"
+      register: terraform_initialized
+    - shell:
+        cmd: terraform init
+        chdir: "terraform/elastic"
+      when: terraform_initialized.stat.exists != true
+    - name: Plan Deployment
+      terraform:
+        project_path: terraform/elastic
+        state: planned
+        plan_file: plan.out
+    - name: Apply Deployment
+      terraform:
+        project_path: terraform/elastic
+        state: present
+        plan_file: plan.out
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"

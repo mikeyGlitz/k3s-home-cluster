@@ -1,0 +1,29 @@
+---
+- hosts: all
+  remote_user: manager
+  roles:
+  - name: cluster
+    become: yes
+    tags:
+      - cluster
+      - bootstrap
+  - name: certificates
+    tags:
+      - ca
+      - certificate
+  - name: mesh
+    tags:
+      - mesh
+  - name: elastic
+    tags:
+      - elastic
+  - name: nas
+    tags:
+      - nas
+  - name: logging
+    tags:
+      - logs
+      - logging
+  - name: vault
+    tags:
+      - vault
