@@ -27,3 +27,8 @@
   - name: vault
     tags:
       - vault
+  - name: identity
+    tags:
+      - identity
+      - keycloak
+      - iam

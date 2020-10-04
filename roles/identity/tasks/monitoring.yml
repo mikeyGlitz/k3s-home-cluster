@@ -1,0 +1,50 @@
+---
+- name: Create Logging resource
+  community.kubernetes.k8s:
+    state: present
+    definition:
+      apiVersion: logging.banzaicloud.io/v1beta1
+      kind: Logging
+      metadata:
+        name: vault-logger
+        namespace: vault-system
+      spec:
+        fluentd: {}
+        fluentbit: {}
+        controlNamespace: logging
+- name: Create Flow resource
+  community.kubernetes.k8s:
+    state: present
+    definition:
+      apiVersion: logging.banzaicloud.io/v1beta1
+      kind: Flow
+      metadata:
+        name: vault-flow
+        namespace: vault-system
+      spec:
+        globalOutputRefs:
+        - logging-index-output
+        filters:
+          - tag_normaliser: {}
+          - parser:
+              remove_key_name_field: true
+              reserve_data: true
+              parse:
+                type: multi_format
+                patterns:
+                  - format: regexp
+                    expression: '/^(?<time>[^\]]*) \[(?<level>[^ ]*)\] (?<source>[^\":]*): (?<message>.*)$/'
+                    time_key: logtime
+                    time_format: '%Y-%m-%dT%H:%M:%S.%LZ'
+                  - format: regexp
+                    expression: '/^time="(?<time>[^\]]*)" level=(?<level>[^ ]*) msg="(?<message>[^\"]*)"/'
+                    time_key: time
+                    time_format: '%Y-%m-%dT%H:%M:%SZ'
+                  - format: regexp
+                    expression: '/^level=(?<level>[^ ]*) ts=(?<time>[^\]]*) caller=(?<source>.*) msg="(?<message>[^\"]*)"/'
+                    time_key: time
+                    time_format: '%Y-%m-%dT%H:%M:%S.%LZ'
+        match:
+        - select:
+            labels:
+              logging.app.name: vault

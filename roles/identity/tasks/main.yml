@@ -1,0 +1,61 @@
+---
+- name: Generate random password
+  shell: "cat /proc/sys/kernel/random/uuid | sed 's/-//g'"
+  register: db_password
+- name: Get vault IP
+  become: no
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+  shell: "kubectl get svc vault -n vault-system -o jsonpath=\"{.spec.clusterIP}\""
+  register: vault_server
+- name: Get vault token
+  become: no
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+  shell: "kubectl get secrets -n vault-system vault-unseal-keys -o jsonpath={.data.vault-root} | base64 --decode"
+  register: vault_token
+- name: Set up Deployment
+  become: no
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+  block:
+    - name: Ensure project folder
+      file: path="/home/{{ ansible_user }}/terraform/identity" state=directory
+    - name: Copy terraform config
+      template:
+          dest: "terraform/identity/terraform.tf" # required. Location to render the template to on the remote machine.
+          src: terraform.tf.j2 # required. Path of a Jinja2 formatted template on the Ansible controller. This can be a relative or absolute path.
+    - name: Copy terraform scripts
+      copy:
+          dest: "/home/{{ ansible_user }}/terraform/identity" # required. Remote absolute path where the file should be copied to. If I(src) is a directory, this must be a directory too. If I(dest) is a nonexistent path and if either I(dest) ends with "/" or I(src) is a directory, I(dest) is created. If I(src) and I(dest) are files, the parent directory of I(dest) isn't created: the task fails if it doesn't already exist.
+          src: "{{ item }}" # not required. Local path to a file to copy to the remote server; can be absolute or relative. If path is a directory, it is copied recursively. In this case, if path ends with "/", only inside contents of that directory are copied to destination. Otherwise, if it does not end with "/", the directory itself with all contents is copied. This behavior is similar to Rsync.
+      with_items:
+        - vault.tf
+        - keycloak.tf
+    - stat:
+        path: "terraform/identity/.terraform"
+      register: terraform_initialized
+    - shell:
+        cmd: terraform init
+        chdir: "terraform/identity"
+      when: terraform_initialized.stat.exists != true
+    - name: Plan deployment
+      terraform:
+        project_path: "terraform/identity" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+        state: planned # not required. choices: planned;present;absent. Goal state of given stage/project
+        plan_file: plan.out
+        variables:
+          keycloak_database_password: "{{ db_password.stdout_lines[0] }}"
+          keycloak_app_user: "{{ keycloak_user }}"
+          keycloak_app_password: "{{ keycloak_password }}"
+    - name: Apply deployment
+      terraform:
+        project_path: "terraform/identity" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+        state: present # not required. choices: planned;present;absent. Goal state of given stage/project
+        plan_file: plan.out
+        variables:
+          keycloak_database_password: "{{ db_password.stdout_lines[0] }}"
+          keycloak_app_user: "{{ keycloak_user }}"
+          keycloak_app_password: "{{ keycloak_password }}"
+    - name: Apply monitoring
+      import_tasks: monitoring.yml

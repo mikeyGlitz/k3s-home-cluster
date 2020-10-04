@@ -19,6 +19,14 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     sudo apt-get update \
     && apt-get -y install --no-install-recommends kubectl \
     && pip3 install ansible openshift hvac \
-    && ansible-galaxy collection install community.kubernetes \
-    && ansible-galaxy collection install community.general \
     && curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+RUN groupadd ansible \
+    && useradd -g ansible ansible \
+    && mkdir -p /home/ansible \
+    && chown ansible:ansible /home/ansible 
+
+USER ansible
+
+RUN  ansible-galaxy collection install community.kubernetes \
+    && ansible-galaxy collection install community.general 

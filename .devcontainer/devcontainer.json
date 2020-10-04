@@ -22,7 +22,7 @@
 		"vscoss.vscode-ansible",
 		"hashicorp.terraform",
 		"ms-kubernetes-tools.vscode-kubernetes-tools"
-	]
+	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -35,4 +35,6 @@
 
 	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
 	// "remoteUser": "vscode"
+	"remoteUser": "ansible",
+	"containerUser": "ansible"
 }
