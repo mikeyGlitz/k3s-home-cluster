@@ -1,4 +1,31 @@
 ---
+- name: Create Vault Certificate
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+  community.kubernetes.k8s:
+    state: present
+    definition:
+      apiVersion: cert-manager.io/v1alpha2
+      kind: Certificate
+      metadata:
+        name: vault-cert
+        namespace: vault-system
+      spec:
+        commonName: vault
+        usages:
+          - server auth
+        dnsNames:
+          - vault
+          - vault.vault-system
+          - vault.vault-system.svc
+          - vault.vault-system.svc.cluster.local
+        ipAddresses:
+          - 127.0.0.1
+        secretName: vault-cert-tls
+        keyAlgorithm: ecdsa
+        issuerRef:
+          name: cluster-issuer
+          kind: ClusterIssuer
 - name: Create Vault rbac
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
@@ -165,7 +192,7 @@
 
         # Specify existing secret contains TLS certificate (accepted secret type: kubernetes.io/tls)
         # If it is set, generating certificate will be disabled
-        # existingTlsSecretName: selfsigned-cert-tls
+        existingTlsSecretName: vault-cert-tls
 
         # Specify threshold for renewing certificates. Valid time units are "ns", "us", "ms", "s", "m", "h".
         # tlsExpiryThreshold: 168h
@@ -262,11 +289,11 @@
               configuration:
                 config:
                 - name: urls
-                  issuing_certificates: https://vault.default:8200/v1/pki/ca
-                  crl_distribution_points: https://vault.default:8200/v1/pki/crl
+                  issuing_certificates: https://vault.vault-system:8200/v1/pki/ca
+                  crl_distribution_points: https://vault.vault-system:8200/v1/pki/crl
                 root/generate:
                 - name: internal
-                  common_name: vault.default
+                  common_name: vault.vault-system
                 roles:
                 - name: default
                   allowed_domains: localhost,pod,svc,default

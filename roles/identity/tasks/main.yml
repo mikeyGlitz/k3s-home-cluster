@@ -32,6 +32,15 @@
       with_items:
         - vault.tf
         - keycloak.tf
+    - name: Generate client secret
+      shell: "cat /proc/sys/kernel/random/uuid | sed 's/-//g'"
+      register: client_password
+    - set_fact:
+        kibana_secret: "{{ client_password.stdout_lines[0] }}"
+    - name: Copy "realm.json"
+      template:
+          dest:  "/home/{{ ansible_user }}/terraform/identity/realm.json"# required. Location to render the template to on the remote machine.
+          src: realm.json.j2 # required. Path of a Jinja2 formatted template on the Ansible controller. This can be a relative or absolute path.
     - stat:
         path: "terraform/identity/.terraform"
       register: terraform_initialized

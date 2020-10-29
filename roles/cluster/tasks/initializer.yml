@@ -23,10 +23,8 @@
           curl -sLS https://get.k3sup.dev | sh
           sudo install k3sup /usr/local/bin/
     - name: Install Master Node
-      shell: k3sup install --ip 192.168.0.120 --user manager --k3s-extra-args '--docker'
+      shell: k3sup install --ip 192.168.0.120 --user manager --k3s-extra-args '--no-deploy traefik --docker'
     - name: Install Agents
       shell: "k3sup join --server-ip 192.168.0.120 --ip {{ item }} --user manager --k3s-extra-args '--docker'"
       with_items: "{{ cluster_ips.stdout_lines }}"
-    - shell: "cat /home/{{ ansible_user }}/kubeconfig"
-      register: kube_config
-    - debug: msg="{{ kube_config.stdout }}"
+    - fetch: src="/home/{{ ansible_user }}/kubeconfig" dest='/home/ansible/.kube/config' flat=yes

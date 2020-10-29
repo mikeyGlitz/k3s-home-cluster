@@ -1,8 +1,7 @@
 ---
-- name: Install linkerd
-  shell: curl -sL https://run.linkerd.io/install | sh
-- name: Install certificate
+- name: Prepare project
   block:
+    - shell: curl -sL https://run.linkerd.io/install | sh
     - file:
         path: "/home/{{ ansible_user }}/terraform/mesh"
         mode: 0755
@@ -19,17 +18,19 @@
         cmd: terraform init
         chdir: "terraform/mesh"
       when: terraform_initialized.stat.exists == false
-    - name: Plan deployment
-      terraform:
-        project_path: "terraform/mesh" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
-        state: planned # not required. choices: planned;present;absent. Goal state of given stage/project
-        plan_file: plan.out
-    - name: Apply deployment
-      terraform:
-        project_path: "terraform/mesh" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
-        state: present # not required. choices: planned;present;absent. Goal state of given stage/project
-        plan_file: plan.out
-      notify:
-        - init_linkerd
+- name: Plan deployment
+  terraform:
+    project_path: "terraform/mesh" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+    state: planned # not required. choices: planned;present;absent. Goal state of given stage/project
+    plan_file: plan.out
   environment:
     KUBECONFIG: ~/kubeconfig
+- name: Apply deployment
+  terraform:
+    project_path: "terraform/mesh" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+    state: present # not required. choices: planned;present;absent. Goal state of given stage/project
+    plan_file: plan.out
+  environment:
+    KUBECONFIG: ~/kubeconfig
+  notify:
+    - init_linkerd

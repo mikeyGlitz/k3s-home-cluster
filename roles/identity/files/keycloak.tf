@@ -7,72 +7,29 @@ resource "kubernetes_namespace" "ns_keycloak" {
     }
 }
 
-resource "helm_release" "rel_keycloak_db" {
-    repository = "https://charts.bitnami.com/bitnami"
-    chart = "postgresql"
-    name = "iam-db"
+resource "kubernetes_secret" "sec_realm" {
+  metadata {
+    name = "keycloak-hausnet-realm"
     namespace = "keycloak"
+  }
 
-    set {
-        name = "master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-        value = "https://vault.vault-system:8200"
-    }
-    set {
-        name = "master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
-        value = "vault-tls"
-    }
-    set {
-        name = "master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
-        value = "default"
-    }
-
-    set { 
-        name = "postgresqlUsername"
-        value = "vault:secret/data/keycloak/database/credential#database_user"
-    }
-
-    set { 
-        name = "postgresqlPassword"
-        value = "vault:secret/data/keycloak/database/credential#database_password"
-    }
-
-    set { 
-        name = "postgresqlDatabase"
-        value = "keycloak"
-    }
-
-    set {
-        name = "persistence.storageClass"
-        value = "nfs-client"
-    }
-
-    depends_on = [
-        vault_generic_secret.sec_keycloak_db,
-        vault_generic_secret.sec_keycloak_app
-    ]
+  data = {
+    "hausnet.json" = file("./realm.json")
+  }
 }
 
-resource "kubernetes_secret" "sec_keycloak_pwd" {
-    metadata {
-        name = "keycloak-credentials"
-        namespace = "keycloak"
-        annotations = {
-            "vault.security.banzaicloud.io/vault-addr" = "https://vault.vault-system:8200"
-            "vault.security.banzaicloud.io/vault-role" = "default"
-            "vault.security.banzaicloud.io/vault-path" = "kubernetes"
-            "vault.security.banzaicloud.io/vault-skip-verify" = "true"
-        }
-    }
-    data = {
-        app_user = "vault:secret/data/keycloak/application/credential#app_user"
-        app_password = "vault:secret/data/keycloak/application/credential#app_password"
-        db_user = "vault:secret/data/keycloak/database/credential#database_user"
-        db_password = "vault:secret/data/keycloak/database/credential#database_password"
-    }
-    depends_on = [
-        vault_generic_secret.sec_keycloak_db,
-        vault_generic_secret.sec_keycloak_app
-    ]
+resource "kubectl_manifest" "mf_https_config" {
+  yaml_body = <<YAML
+  apiVersion: configuration.konghq.com/v1
+  kind: KongIngress
+  metadata:
+      name: https-only
+      namespace: keycloak
+  route:
+    protocols:
+    - https
+    https_redirect_status_code: 302
+  YAML
 }
 
 resource "helm_release" "rel_keycloak" {
@@ -83,57 +40,88 @@ resource "helm_release" "rel_keycloak" {
 
     depends_on = [
         vault_generic_secret.sec_keycloak_db,
-        vault_generic_secret.sec_keycloak_app,
-        kubernetes_secret.sec_keycloak_pwd
+        vault_generic_secret.sec_keycloak_app
     ]
 
     values = [
         <<YAML
             ingress:
-            enabled: true
-            annotations:
-                kubernetes.io/ingress.class: traefik
+              enabled: true
+              annotations:
+                kubernetes.io/ingress.class: kong
                 cert-manager.io/cluster-issuer: cluster-issuer
-                traefik.ingress.kubernetes.io/redirect-entry-point: https
-            rules:
+                konghq.com/override: "https-only"
+              rules:
                 - host: auth.haus.net
-                paths:
+                  paths:
                     - /
-            tls:
+              tls:
                 - hosts:
                     - auth.haus.net
-                secretName: keycloak-app-tls
+                  secretName: keycloak-app-tls
+            podAnnotations:
+              vault.security.banzaicloud.io/vault-addr: https://vault.vault-system:8200
+              vault.security.banzaicloud.io/vault-tls-secret: vault-cert-tls
+              vault.security.banzaicloud.io/vault-role: default
             extraEnv: |
-              - name: KEYCLOAK_USER_FILE
-                value: /secrets/credential/app_user
-              - name: KEYCLOAK_USER_PASSWORD
-                value: /secrets/credential/app_password
-              - name: DB_VENDOR
-                value: postgres
-              - name: DB_ADDR
-                value: iam-db-postgresql
-              - name: DB_USER_FILE
-                value: /secrets/credential/db_user
-              - name: DB_USER_PASSWORD
-                value: /secrets/credential/db_password
+              - name: PROXY_ADDRESS_FORWARDING
+                value: "true"
+              - name: KEYCLOAK_USER
+                value: vault:secret/data/keycloak/application/credential#app_user
+              - name: KEYCLOAK_PASSWORD
+                value: vault:secret/data/keycloak/application/credential#app_password
+              - name: KEYCLOAK_IMPORT
+                value: /secrets/realms/hausnet.json
             extraVolumeMounts: |
-              - name: credential
-                mountPath: /secrets/db-creds
-                readOnly: "true"
+              - name: realms
+                mountPath: /secrets/realms
             extraVolumes: |
-              - name: credential
+              - name: realms
                 secret:
-                  secretName: keycloak-credentials
+                  secretName: keycloak-hausnet-realm
         YAML
     ]
 
     set {
-        name = "postgresql.enabled"
-        value = "false"
+      name = "serviceAccount.create"
+      value = "false"
     }
 
     set {
-        name = "image.tag"
-        value = "9.0.0"
+        name = "postgresql.enabled"
+        value = "true"
+    }
+
+    set { 
+        name = "postgresql.postgresqlUsername"
+        value = "vault:secret/data/keycloak/database/credential#database_user"
+    }
+
+    set { 
+        name = "postgresql.postgresqlPassword"
+        value = "vault:secret/data/keycloak/database/credential#database_password"
+    }
+
+    set { 
+        name = "postgresql.postgresqlDatabase"
+        value = "keycloak"
+    }
+
+    set {
+        name = "postgresql.persistence.storageClass"
+        value = "nfs-client"
+    }
+
+    set {
+        name = "postgresql.master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+        value = "https://vault.vault-system:8200"
+    }
+    set {
+        name = "postgresql.master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+        value = "vault-cert-tls"
+    }
+    set {
+        name = "postgresql.master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+        value = "default"
     }
 }
