@@ -15,3 +15,19 @@ resource "helm_release" "rel_logging_operator" {
         value = "false"
     }
 }
+
+resource "helm_release" "rel_logging_loki" {
+  repository = "https://grafana.github.io/helm-charts"
+  chart = "loki-stack"
+  name = "loki"
+  namespace = "logging"
+
+  set {
+    name = "pomtail.enabled"
+    value = "true"
+  }
+  set {
+    name = "loki.enabled"
+    value = "true"
+  }
+}

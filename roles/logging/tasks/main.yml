@@ -30,6 +30,31 @@
         plan_file: plan.out
       register: terraform_apply
     - debug: msg="{{ terraform_apply.stdout }}"
+    - name: Set up Loki output
+      community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: logging.banzaicloud.io/v1beta1
+          kind: ClusterOutput
+          metadata:
+            name: logging-index-output
+            namespace: logging
+          spec:
+            loki:
+              url: http://loki:3100
+              configure_kubernetes_labels: true
+              buffer:
+                timekey: 1m
+                timekey_wait: 30s
+                timekey_use_utc: true
+    - name: copy files
+      copy: src="{{ item }}" dest="{{ item }}"
+      with_items:
+      - grafana.yml
+      - kustomization.yml
+    - name: Deploy grafana updates
+      shell: '/home/{{ ansible_user }}/.linkerd2/bin/linkderd upgrade > linkerd.yml'
+    - shell: 'kubectl kustomize | kubectl apply -f -'
+    - shell: 'kubectl -n linkerd rollout restart deployment linkerd-grafana'
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
-- import_tasks: elastic.yml

@@ -8,7 +8,8 @@ resource "kubernetes_namespace" "ns_nfs" {
 }
 
 resource "helm_release" "rel_nfs" {
-    repository = "https://kubernetes-charts.storage.googleapis.com/"
+    # repository = "https://kubernetes-charts.storage.googleapis.com/"
+    repository = "https://ckotzbauer.github.io/helm-charts"
     chart = "nfs-client-provisioner"
     name ="nfs-client"
     namespace = "nfs"

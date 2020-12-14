@@ -7,11 +7,6 @@
     tags:
       - cluster
       - bootstrap
-  - name: ingress
-    become: no
-    tags:
-      - ingress
-      - lb
   - name: certificates
     tags:
       - ca

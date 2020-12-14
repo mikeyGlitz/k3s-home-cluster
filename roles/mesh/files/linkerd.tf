@@ -27,4 +27,7 @@ resource "kubectl_manifest" "mf_linkerd_cert" {
       - server auth
       - client auth
   YAML
+  provisioner "local-exec" {
+    command = ".linkerd2/bin/linkerd --identity-external-issuer=true --config config.yml | kubectl apply -f -"
+  }
 }

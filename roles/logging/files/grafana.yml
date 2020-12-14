@@ -1,0 +1,25 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: linkerd-grafana-config
+data:
+  datasources.yaml: |-
+    apiVersion: 1
+    datasources:
+    - name: prometheus
+      type: prometheus
+      access: proxy
+      orgId: 1
+      url: http://linkerd-prometheus.linkerd.svc.cluster.local:9090
+      isDefault: false
+      jsonData:
+        timeInterval: "5s"
+      version: 1
+      editable: true
+    - name: Loki
+      type: loki
+      access: proxy
+      editable: false
+      default: true
+      url: http://loki.logging:3100
+      maximumLines: "300"

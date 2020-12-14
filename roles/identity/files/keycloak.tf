@@ -18,20 +18,6 @@ resource "kubernetes_secret" "sec_realm" {
   }
 }
 
-resource "kubectl_manifest" "mf_https_config" {
-  yaml_body = <<YAML
-  apiVersion: configuration.konghq.com/v1
-  kind: KongIngress
-  metadata:
-      name: https-only
-      namespace: keycloak
-  route:
-    protocols:
-    - https
-    https_redirect_status_code: 302
-  YAML
-}
-
 resource "helm_release" "rel_keycloak" {
     namespace = "keycloak"
     name = "keycloak"
@@ -48,9 +34,9 @@ resource "helm_release" "rel_keycloak" {
             ingress:
               enabled: true
               annotations:
-                kubernetes.io/ingress.class: kong
+                kubernetes.io/ingress.class: traefik
                 cert-manager.io/cluster-issuer: cluster-issuer
-                konghq.com/override: "https-only"
+                traefik.ingress.kubernetes.io/redirect-entry-point: https
               rules:
                 - host: auth.haus.net
                   paths:
