@@ -28,6 +28,9 @@ resource "kubectl_manifest" "mf_linkerd_cert" {
       - client auth
   YAML
   provisioner "local-exec" {
-    command = ".linkerd2/bin/linkerd --identity-external-issuer=true --config config.yml | kubectl apply -f -"
+    command = "~/.linkerd2/bin/linkerd install --identity-external-issuer=true --config config.yml | kubectl apply -f -"
+    environment = {
+      "KUBECONFIG" = "/home/manager/kubeconfig"
+    }
   }
 }

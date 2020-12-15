@@ -1,6 +1,4 @@
 ---
-- name: copy linkderd config
-  copy: src="config.yml" dest="config.yml"
 - name: Prepare project
   block:
     - shell: curl -sL https://run.linkerd.io/install | sh
@@ -14,6 +12,7 @@
       with_items:
         - terraform.tf
         - linkerd.tf
+        - config.yml
     - stat: path="terraform/mesh/.terraform"
       register: terraform_initialized
     - shell:

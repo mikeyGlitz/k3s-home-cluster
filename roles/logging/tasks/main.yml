@@ -53,7 +53,7 @@
       - grafana.yml
       - kustomization.yml
     - name: Deploy grafana updates
-      shell: '/home/{{ ansible_user }}/.linkerd2/bin/linkderd upgrade > linkerd.yml'
+      shell: '/home/{{ ansible_user }}/.linkerd2/bin/linkerd upgrade > linkerd.yml'
     - shell: 'kubectl kustomize | kubectl apply -f -'
     - shell: 'kubectl -n linkerd rollout restart deployment linkerd-grafana'
   environment:

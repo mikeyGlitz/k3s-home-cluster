@@ -32,3 +32,6 @@
       - identity
       - keycloak
       - iam
+  - name: monitoring
+    tags:
+      - monitoring
