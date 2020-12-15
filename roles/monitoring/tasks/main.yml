@@ -25,9 +25,9 @@
         protocol: openid-connect
         protocolMapper: oidc-audience-mapper
     redirect_uris:
-      - https://monitoring.haus.net/oauth2/callback
-    web_origins:
       - https://monitoring.haus.net/*
+    web_origins:
+      - "*"
     validate_certs: no
 - name: Deploy proxy resources
   block:
@@ -49,7 +49,7 @@
         cmd: terraform init
         chdir: "terraform/monitoring"
       when: terraform_initialized.stat.exists != true
-    - shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
+    - shell: hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random
       register: encryption_key
     - name: Plan deployment
       terraform:

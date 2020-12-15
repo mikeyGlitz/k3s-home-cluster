@@ -1,43 +1,50 @@
 ---
 - name: Deploy Kubernetes Resources
   block:
-    - name: Generate Config-Map
+    - name: Create Secret
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: proxy-client-creds
+            namespace: linkerd
+            annotations:
+              vault.security.banzaicloud.io/vault-addr: "https://vault.vault-system.svc.cluster.local:8200"
+              vault.security.banzaicloud.io/vault-role: "default"
+              vault.security.banzaicloud.io/vault-path: "kubernetes"
+              vault.security.banzaicloud.io/vault-skip-verify: "true"
+          type: Opaque
+          stringData:
+            CLIENT_ID: vault:secret/data/keycloak/monitoring-proxy/credential#client_id
+            CLIENT_SECRET: vault:secret/data/keycloak/monitoring-proxy/credential#client_secret
+            ENCRYPTION_KEY: vault:secret/data/keycloak/monitoring-proxy/credential#encryption_key
+    - name: Create configuration
       k8s:
         state: present
         definition:
           apiVersion: v1
           kind: ConfigMap
           metadata:
-            name: proxy-config-template
+            name: gatekeeper-config
             namespace: linkerd
           data:
-            config.hcl: |
-              vault {
-                ssl {
-                  ca_cert = "/vault/tls/ca.crt"
-                }
-                retry {
-                  backoff = "1s"
-                }
-              }
-              template {
-                contents = <<EOH
-                  {{ '{{' }} with secret "secret/keycloak/monitoring-proxy/credential" {{ '}}' }}
-                  client_id = "{{ '{{' }} .Data.data.client_id {{ '}}' }}"
-                  client_secret = "{{ '{{' }} .Data.data.client_secret {{ '}}' }}"
-                  {{ '{{' }} end }}
-                  cookie_secret = "{{ '{{' }} .Data.data.encryption_key {{ '}}' }}"
-                  http_address = ":3000"
-                  upstreams = [ "http://linkerd-web.linkerd.svc.cluster.local:8084/" ]
-                  redirct_url = "https://monitoring.{{ domain }}"
-                  provider = "keycloak"
-                  login_url = "https://auth.{{ domain }}/realms/hausnet/protocol/openid-connect/auth"
-                  redeem_url ="https://auth.{{ domain }}/realms/hausnet/protocol/openid-connect/token"
-                  validate_url = "https://auth.{{ domain }}/realms/hausnet/protocol/openid-connect/userinfo"
-                EOH
-                destination = "/vault/secrets/oauth2-config.cfg"
-                command = "/bin/sh -c \"kill -HUP $(pidof oauth2-proxy) || true\""
-              }
+            gatekeeper.yaml: |
+              discovery-url: https://auth.{{ domain }}/auth/realms/hausnet
+              skip-upstream-tls-verify: false
+              skip-openid-provider-tls-verify: true
+              listen: ':3000'
+              secure-cookie: false
+              enable-logging: true
+              enable-json-logging: true
+              enable-default-deny: true
+              enable-refresh-tokens: true
+              enable-authorization-header: false
+              debug: true
+              ingress.enabled: true
+              redirection-url: https://monitoring.{{ domain }}
+              upstream-url: http://linkerd-web.linkerd.svc.cluster.local:8084/
     - name: Create deployment
       k8s:
         state: present
@@ -57,19 +64,41 @@
               metadata:
                 labels:
                   app: linkerd-web-proxy
-                annotations:
-                  vault.security.banzaicloud.io/vault-ct-configmap: proxy-config-template
-                  vault.security.banzaicloud.io/vault-addr: https://vault.vault-system:8200
-                  vault.security.banzaicloud.io/vault-tls-secret: vault-cert-tls
-                  vault.security.banzaicloud.io/vault-role: default
               spec:
                 containers:
                 - name: linkerd-web-proxy
-                  image: quay.io/oauth2-proxy/oauth2-proxy
+                  image: bitnami/keycloak-gatekeeper
                   ports:
                   - containerPort: 3000
                   args:
-                    - --config="/vault/secrets/oauth2-config.cfg"
+                    - /keycloak-gatekeeper
+                    - --client-id=$(CLIENT_ID)
+                    - --client-secret=$(CLIENT_SECRET)
+                    - --encryption-key=$(COOKIE_SECRET)
+                    - --config=/etc/config/gatekeeper.yaml
+                  volumeMounts:
+                    - name: gatekeeper-config
+                      mountPath: /etc/config
+                  env:
+                    - name: CLIENT_ID
+                      valueFrom:
+                        secretKeyRef:
+                          key: CLIENT_ID
+                          name: proxy-client-creds
+                    - name: CLIENT_SECRET
+                      valueFrom:
+                        secretKeyRef:
+                          key: CLIENT_SECRET
+                          name: proxy-client-creds
+                    - name: COOKIE_SECRET
+                      valueFrom:
+                        secretKeyRef:
+                          key: ENCRYPTION_KEY
+                          name: proxy-client-creds
+                volumes:
+                  - name: gatekeeper-config
+                    configMap:
+                      name: gatekeeper-config
     - name: Create Service
       k8s:
         state: present
