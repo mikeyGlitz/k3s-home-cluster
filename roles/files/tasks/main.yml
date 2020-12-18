@@ -1,0 +1,119 @@
+---
+- name: Create Project folder
+  file: path=terraform/files state=directory
+- name: Copy files to project folder
+  copy: src=files.tf dest=terraform/files/files.tf
+- name: Prepare Terraform
+  block:
+    - name: Get vault IP
+      environment:
+      shell: "kubectl get svc vault -n vault-system -o jsonpath=\"{.spec.clusterIP}\""
+      register: vault_server
+    - name: Get vault token
+      shell: "kubectl get secrets -n vault-system vault-unseal-keys -o jsonpath={.data.vault-root} | base64 --decode"
+      register: vault_token
+    - name: Generate DB password
+      shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
+      register: client_secret
+    - name: Create Keycloak client
+      community.general.keycloak_client:
+        state: present
+        auth_client_id: admin-cli
+        auth_keycloak_url: "https://auth.{{ domain }}/auth"
+        auth_username: "{{ admin_user }}"
+        auth_password: "{{ admin_password }}"
+        auth_realm: master
+        name: Files Portal
+        client_id: files-portal
+        client_authenticator_type: client-secret
+        secret: "{{ client_secret.stdout }}"
+        realm: hausnet
+        protocol_mappers:
+          - config:
+              included.client.audience: "files-portal"
+              id.token.claim: "false"
+              access.token.claim: "true"
+            name: files-portal-mapper
+            protocol: openid-connect
+            protocolMapper: oidc-audience-mapper
+        redirect_uris:
+          - https://files.haus.net/*
+        web_origins:
+          - "*"
+        validate_certs: no
+    - name: Generate DB password
+      shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
+      register: db_password
+    - name: Generate cache password
+      shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
+      register: redis_password
+    - debug: msg="{{ redis_password.stdout }}"
+    - name: Create Namespace
+      community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: files
+            annotations:
+              linkerd.io/inject: enabled
+    - name: Create monitoring
+      include: monitoring.yml
+    - name: Copy terraform config
+      template:
+          dest: "terraform/files/terraform.tf" # required. Location to render the template to on the remote machine.
+          src: terraform.tf.j2 # required. Path of a Jinja2 formatted template on the Ansible controller. This can be a relative or absolute path.
+    - stat:
+        path: "terraform/files/.terraform"
+      register: terraform_initialized
+    - shell:
+        cmd: terraform init
+        chdir: "terraform/files"
+      when: terraform_initialized.stat.exists != true
+    - name: Plan deployment
+      terraform:
+        project_path: "terraform/files" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+        state: planned # not required. choices: planned;present;absent. Goal state of given stage/project
+        plan_file: plan.out
+        variables:
+          db_password: "{{ db_password.stdout }}"
+          app_user: "{{ app_user }}"
+          app_password: "{{ app_password }}"
+          redis_password: "{{ redis_password.stdout }}"
+    - name: Apply deployment
+      terraform:
+        project_path: "terraform/files" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+        state: present # not required. choices: planned;present;absent. Goal state of given stage/project
+        plan_file: plan.out
+        variables:
+          db_password: "{{ db_password.stdout }}"
+          app_user: "{{ app_user }}"
+          app_password: "{{ app_password }}"
+          redis_password: "{{ redis_password.stdout }}"
+    - pause: minutes=5
+    - shell: ls /mnt/external/ | grep -e '^files-owncloud-files-pvc'
+      register: file_folder
+    - name: Update config with memcache settings
+      become: yes
+      blockinfile:
+          path: "/mnt/external/{{ file_folder.stdout_lines[0] }}/config/config.php" # required. The file to modify.,Before 2.3 this option was only usable as I(dest), I(destfile) and I(name).
+          insertbefore: '\);' # not required. choices: BOF;*regex*. If specified, the block will be inserted before the last match of specified regular expression. A special value is available; C(BOF) for inserting the block at the beginning of the file.  If specified regular expression has no matches, the block will be inserted at the end of the file.
+          state: present # not required. choices: absent;present. Whether the block should be there or not.
+          block: |
+                'openid-connect' => array(
+                  'provider-url' => 'https://auth.{{ domain }}/auth/realms/hausnet',
+                  'client-id' => 'files-portal',
+                  'client-secret' => '{{ client_secret.stdout }}',
+                  'loginButtonName' => 'Home Network SSO',
+                  'autoRedirectOnLoginPage' => false,
+                  'mode' => 'userid',
+                  'search-attribute' => 'preferred_username',
+                  'post_logout_redirect_uri' => 'https://files.{{ domain }}',
+                  'insecure' => true,
+                ),
+    - name: Restart files deployment
+      shell: kubectl rollout restart -n files deployments/owncloud
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    

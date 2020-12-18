@@ -35,3 +35,6 @@
   - name: monitoring
     tags:
       - monitoring
+  - name: files
+    tags:
+      - files
