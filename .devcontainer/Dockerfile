@@ -29,4 +29,5 @@ RUN groupadd ansible \
 USER ansible
 
 RUN  ansible-galaxy collection install community.kubernetes \
-    && ansible-galaxy collection install community.general 
+    && ansible-galaxy collection install community.general \
+    && ansible-galaxy install abdennour.helmfile

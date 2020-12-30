@@ -18,6 +18,7 @@
   become: no
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"
   block:
     - name: Ensure project folder
       file: path="/home/{{ ansible_user }}/terraform/identity" state=directory

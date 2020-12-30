@@ -38,3 +38,4 @@
         plan_file: plan.out
   environment:
     KUBECONFIG: ~/kubeconfig
+    KUBE_CONFIG_PATH: ~/kubeconfig

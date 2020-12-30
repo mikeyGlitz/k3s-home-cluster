@@ -11,15 +11,19 @@
     tags:
       - ca
       - certificate
+  - name: ingress
+    tags:
+      - ingress
+      - proxy
   - name: mesh
     tags:
       - mesh
-  - name: elastic
-    tags:
-      - elastic
   - name: nas
     tags:
       - nas
+  - name: elastic
+    tags:
+      - elastic
   - name: logging
     tags:
       - logs
@@ -32,9 +36,13 @@
       - identity
       - keycloak
       - iam
-  - name: monitoring
-    tags:
-      - monitoring
   - name: files
     tags:
       - files
+  - name: ldap
+    tags:
+      - ldap
+      - directory
+  - name: monitoring
+    tags:
+      - monitoring

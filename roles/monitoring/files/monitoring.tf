@@ -24,125 +24,72 @@ resource "vault_generic_secret" "sec_proxy_creds" {
   JSON
 }
 
-/*
-resource "kubernetes_config_map" "cm_template" {
-  metadata {
-    name = "proxy-config-template"
-    namespace = "linkerd"
-  }
-  data = {
-    "config.hcl" = <<HCL
-      vault {
-        ssl {
-          ca_cert = "/vault/tls/ca.crt"
-        }
-        retry {
-          backoff = "1s"
-        }
-      }
-      template {
-        contents = <<EOH
-          {{ '{{' }} with secret "secret/keycloak/monitoring-proxy/credential" {{ '}}' }}
-          client_id = "{{ '{{' }} .Data.data.client_id {{ '}}' }}"
-          client_secret = "{{ '{{' }} .Data.data.client_secret {{ '}}' }}"
-          {{ '{{' }} end }}
-          cookie_secret = "{{ '{{' }} .Data.data.encryption_key {{ '}}' }}"
-          http_address = ":3000"
-          upstreams = [ "http://linkerd-web.linkerd.svc.cluster.local:8084/" ]
-          redirct_url = "https://monitoring.{{ domain }}"
-          provider = "keycloak"
-          login_url = "https://auth.{{ domain }}/realms/hausnet/protocol/openid-connect/auth"
-          redeem_url ="https://auth.{{ domain }}/realms/hausnet/protocol/openid-connect/token"
-          validate_url = "https://auth.{{ domain }}/realms/hausnet/protocol/openid-connect/userinfo"
-        EOH
-        destination = "/vault/secrets/oauth2-config.cfg"
-        command = "/bin/sh -c \"kill -HUP $(pidof oauth2-proxy) || true\""
-      }
-    HCL
-  }
-}
+resource "helm_release" "rel_oauth2_proxy" {
+  repository = "https://k8s-at-home.com/charts/"
+  chart = "oauth2-proxy"
+  name = "auth"
+  namespace = "linkerd"
 
-resource "kubernetes_deployment" "dep_proxy" {
-  metadata {
-    name = "linkerd-web-proxy"
-    namespace = "linkerd"
-  }
-  spec {
-    selector {
-      match_labels = {
-        "app" = "linkerd-web-proxy"
-      }
-    }
-    template {
-      metadata {
-        labels = {
-          "app" = "linkerd-web-proxy"
-        }
-        annotations = {
-          "vault.security.banzaicloud.io/vault-ct-configmap" = "proxy-config-template"
-          "vault.security.banzaicloud.io/vault-addr" = "https://vault.vault-system:8200"
-          "vault.security.banzaicloud.io/vault-tls-secret" = "vault-cert-tls"
-          "vault.security.banzaicloud.io/vault-role" = "default"
-        }
-      }
-      spec {
-        container {
-          name = "linkerd-web-proxy"
-          image = "quay.io/oauth2-proxy/oauth2-proxy"
-          port {
-            container_port = 3000
-          }
-          args = [ "--config=/vault/secrets/oauth-config.cfg" ]
-        }
-      }
-    }
-  }
-}
+  values = [ 
+    <<YAML
+    extraArgs:
+      provider: keycloak
+      email-domain: "*"
+      scope: "openid profile email"
+      login-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth
+      redeem-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token
+      validate-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo
+      keycloak-group: /admin
+      ssl-insecure-skip-verify: true
+    ingress:
+      enabled: true
+      hosts:
+        - monitoring.haus.net
+      path: /oauth2
+      annotations:
+        kubernetes.io/ingress.class: nginx
+        cert-manager.io/cluster-issuer: cluster-issuer
+        nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+      tls:
+        - secretName: oauth-proxy-tls
+          hosts:
+            - monitoring.haus.net
+    extraEnv:
+      - name: OAUTH2_PROXY_CLIENT_ID
+        value: vault:secret/data/keycloak/monitoring-proxy/credential#client_id
+      - name: OAUTH2_PROXY_CLIENT_SECRET
+        value: vault:secret/data/keycloak/monitoring-proxy/credential#client_secret
+      - name: OAUTH2_PROXY_COOKIE_SECRET
+        value: vault:secret/data/keycloak/monitoring-proxy/credential#encryption_key
+    YAML
+   ]
 
-resource "kubernetes_service" "svc_proxy" {
-  metadata {
-    name = "linkerd-web-proxy"
-    namespace = "linkerd"
+  set {
+    name = "proxyVarsAsSecrets"
+    value = "false"
   }
-  spec {
-    selector = {
-      "app" = "linkerd-web-proxy"
-    }
-    port {
-      port = 3000
-      target_port = "3000"
-    }
-  }
-}
 
-resource "kubernetes_ingress" "ing_proxy" {
-  metadata {
-    name = "linkerd-web-proxy"
-    namespace = "linkerd"
-    annotations = {
-      "kubernetes.io/ingress-class" = "traefik"
-      "cert-manager.io/cluster-issuer" = "cluster-issuer"
-      "traefik.ingress.kubernetes.io/redirect-entry-endpoint" = "https"
-      "ingress.kubernetes.io/custom-request-headers" = "15d-dst-override:linkerd.web.linkerd.svc.cluster.local:8084"
-    }
+  set {
+    name = "podAnnotations.linkerd\\.io/inject"
+    value = "enabled"
   }
-  spec {
-    rule {
-      host = "monitoring.haus.net"
-      http {
-        path {
-          path = "/"
-          backend {
-            service_name = "linkerd-web-proxy"
-            service_port = "3000"
-          }
-        }
-      }
-    }
-    tls {
-      hosts = [ "monitoring.haus.net" ]
-      secret_name = "proxy-tls-cert"
-    }
+
+  set {
+    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+    value = "https://vault.vault-system:8200"
+  }
+
+  set {
+    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+    value = "default"
+  }
+  set {
+    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+    value = "vault-cert-tls"
+  }
+
+  set {
+    name = "serviceAccount.enabled"
+    value = "false"
   }
 }
-*/

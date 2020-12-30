@@ -18,6 +18,15 @@
     realm: hausnet
     protocol_mappers:
       - config:
+          full.path: "true"
+          id.token.claim: "true"
+          access.token.claim: "true"
+          claim.name: "groups"
+          userinfo.token.claim: "true"
+        name: monitoring-group-mapper
+        protocol: openid-connect
+        protocolMapper: oidc-group-membership-mapper
+      - config:
           included.client.audience: "monitoring-proxy"
           id.token.claim: "false"
           access.token.claim: "true"
@@ -25,7 +34,7 @@
         protocol: openid-connect
         protocolMapper: oidc-audience-mapper
     redirect_uris:
-      - https://monitoring.haus.net/*
+      - https://monitoring.haus.net/oauth2/*
     web_origins:
       - "*"
     validate_certs: no
@@ -71,5 +80,6 @@
           encryption_key: "{{ encryption_key.stdout }}"
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"
 - name: Deploy kubernetes resources
   include: deployment.yml

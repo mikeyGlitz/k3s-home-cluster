@@ -1,31 +1,27 @@
 ---
-- name: Create project folder
-  file:
-    path: "/home/{{ ansible_user }}/terraform/nas"
-    state: directory
-    mode: 0755
 - name: Deploy NFS Client
   block:
-    - copy: src="{{ item }}" dest="/home/{{ ansible_user }}/terraform/nas/{{ item }}"
-      with_items:
-      - nas.tf
-      - terraform.tf
-    - stat:
-        path: "terraform/nas/.terraform"
-      register: terraform_initialized
-    - shell:
-        cmd: terraform init
-        chdir: "terraform/nas"
-      when: terraform_initialized.stat.exists != true
-    - name: Plan Deployment
-      terraform:
-        project_path: terraform/nas
-        state: planned
-        plan_file: plan.out
-    - name: Apply Deployment
-      terraform:
-        project_path: terraform/nas
+    - community.kubernetes.k8s:
         state: present
-        plan_file: plan.out
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: nfs
+            annotations:
+              linkerd.io/inject: enabled
+    - community.kubernetes.helm:
+        name: nfs-client
+        chart_ref: nfs-client-provisioner
+        chart_repo_url: https://ckotzbauer.github.io/helm-charts
+        release_namespace: nfs
+        values:
+          nfs:
+            server: 192.168.0.120
+            path: /mnt/external
+            mountOptions:
+              - nfsvers=4
+              - async
+              - noatime
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"

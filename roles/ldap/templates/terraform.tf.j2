@@ -10,8 +10,12 @@ terraform {
 
 provider  "kubernetes" {}
 
-provider "kubectl" {}
+provider  "kubectl" {}
 
 provider "helm" {}
 
-provider "http" {}
+provider "vault" {
+    token = "{{ vault_token.stdout }}"
+    address = "https://{{ vault_server.stdout_lines[0] }}:8200"
+    skip_tls_verify = true
+}

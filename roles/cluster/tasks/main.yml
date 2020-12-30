@@ -2,11 +2,24 @@
 - name: Install base packages
   apt:
     name:
+      - apt-transport-https
       - sshpass
       - python3-pip
       - unzip
       - curl
     state: present
+- name: Install helm key
+  apt_key:
+    url: https://baltocdn.com/helm/signing.asc
+    # data: "{{ lookup('url', 'https://baltocdn.com/helm/signing.asc') }}"
+    state: present
+- name: Install helm repository
+  apt_repository:
+    repo: deb https://baltocdn.com/helm/stable/debian/ all main
+    filename: helm
+    state: present
+- name: Install Helm
+  apt: name=helm update_cache=yes
 - name: Ensure local bin
   file: path="/home/{{ ansible_user }}/.local/bin" state=directory
 - name: Install python packages

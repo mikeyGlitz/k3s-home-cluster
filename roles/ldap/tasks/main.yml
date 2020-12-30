@@ -1,0 +1,71 @@
+---
+- name: Prepare terraform directory
+  file: path=terraform/ldap state=directory
+- name: Copy terraform files
+  copy: src=ldap.tf dest=terraform/ldap/ldap.tf
+- name: Deploy terraform
+  block:
+    - name: Get vault IP
+      environment:
+      shell: "kubectl get svc vault -n vault-system -o jsonpath=\"{.spec.clusterIP}\""
+      register: vault_server
+    - name: Get vault token
+      shell: "kubectl get secrets -n vault-system vault-unseal-keys -o jsonpath={.data.vault-root} | base64 --decode"
+      register: vault_token
+    - name: Generate terraform configuration file
+      template: src=terraform.tf.j2 dest=terraform/ldap/terraform.tf
+    - stat: path=terraform/ldap/.terraform
+      register: terraform_initialized
+    - shell:
+        cmd: terraform init # required. The shell module takes a free form command to run, as a string.  There's not an actual option named "free form".  See the examples!
+        chdir: terraform/ldap # not required. cd into this directory before running the command
+      when: terraform_initialized.stat.exists == false
+    - name: Plan deployment
+      terraform:
+        project_path: "terraform/ldap" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+        state: planned # not required. choices: planned;present;absent. Goal state of given stage/project
+        plan_file: plan.out
+        variables:
+          ldap_password: '{{ ldap_password }}'
+    - name: Apply deployment
+      terraform:
+        project_path: "terraform/ldap" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+        state: present # not required. choices: planned;present;absent. Goal state of given stage/project
+        plan_file: plan.out
+        variables:
+          ldap_password: '{{ ldap_password }}'
+    - name: Get ldap IP
+      shell: "kubectl get svc directory-openldap -n ldap -o jsonpath=\"{.spec.clusterIP}\""
+      register: ldap_server
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"
+- name: Ensure ldap packages
+  become: yes
+  apt: name='slapd,ldap-utils,libsasl2-dev,python-dev,libldap2-dev,libssl-dev' state=present
+- name: Ensure python-ldap
+  become: yes
+  pip: name=python-ldap state=present executable=pip3
+- name: Generate service account password
+  shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
+  register: svc_acct_pwd
+- name: Generate service account password
+  shell: slappasswd -u -s '{{ svc_acct_pwd.stdout }}' -h '{SSHA}'
+  register: svc_acct_pwd
+- name: Generate LDAP constructs
+  block:
+    - name: Create Groups
+      ldap_entry:
+        state: present
+        server_uri: "ldap://{{ ldap_server.stdout_lines[0] }}:389"
+        bind_dn: "cn=admin,dc=haus,dc=net"
+        bind_pw: "{{ ldap_password }}"
+        dn: "{{ item }},dc=haus,dc=net"
+        objectClass:
+          - top
+          - organizationalUnit
+      with_items:
+        - ou=People
+        - ou=Groups
+        - ou=Services
+        - ou=Machines

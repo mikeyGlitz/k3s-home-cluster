@@ -29,11 +29,13 @@
         plan_file: plan.out
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"
 - import_tasks: vault.yml
 - import_tasks: monitoring.yml
 - name: Get certificate from secret
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"
   shell: "kubectl get secret -n vault-system vault-tls -o jsonpath=\"{.data.ca\\.crt}\" | base64 --decode > /home/{{ ansible_user }}/vault.crt"
 - name: Set up Vault
   become: yes

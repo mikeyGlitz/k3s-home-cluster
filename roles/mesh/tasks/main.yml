@@ -33,3 +33,6 @@
     plan_file: plan.out
   environment:
     KUBECONFIG: ~/kubeconfig
+    KUBE_CONFIG_PATH: ~/kubeconfig
+- name: Wait for linkerd to initialize
+  pause: minutes=3

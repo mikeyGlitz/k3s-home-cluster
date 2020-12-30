@@ -19,8 +19,8 @@
       apiVersion: logging.banzaicloud.io/v1beta1
       kind: Flow
       metadata:
-        name: vault-flow
-        namespace: vault-system
+        name: keycloak-flow
+        namespace: keycloak
       spec:
         globalOutputRefs:
         - logging-index-output
@@ -47,4 +47,4 @@
         match:
         - select:
             labels:
-              logging.app.name: vault
+              app.kubernetes.io/name: keycloak

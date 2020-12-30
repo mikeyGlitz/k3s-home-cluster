@@ -58,3 +58,4 @@
     - shell: 'kubectl -n linkerd rollout restart deployment linkerd-grafana'
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"

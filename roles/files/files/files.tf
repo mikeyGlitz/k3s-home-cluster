@@ -126,7 +126,7 @@ resource "kubernetes_persistent_volume_claim" "pvc_owncloud" {
   }
   spec {
     storage_class_name = "nfs-client"
-    access_modes = [ "ReadWriteOnce" ]
+    access_modes = [ "ReadWriteMany" ]
     resources {
       requests = {
         "storage" = "2.5Ti"
@@ -262,9 +262,9 @@ resource "kubernetes_ingress" "ing_owncloud" {
       "app" = "owncloud"
     }
     annotations = {
-      "kubernetes.io/ingress-class" = "traefik"
+      "kubernetes.io/ingress-class" = "nginx"
       "cert-manager.io/cluster-issuer" = "cluster-issuer"
-      "traefik.ingress.kubernetes.io/redirect-entry-point" = "https"
+      "nginx.ingress.kubernetes.io/ssl-redirect" = "true"
     }
   }
   spec {

@@ -34,9 +34,9 @@ resource "helm_release" "rel_keycloak" {
             ingress:
               enabled: true
               annotations:
-                kubernetes.io/ingress.class: traefik
+                kubernetes.io/ingress.class: nginx
                 cert-manager.io/cluster-issuer: cluster-issuer
-                traefik.ingress.kubernetes.io/redirect-entry-point: https
+                nginx.ingress.kubernetes.io/ssl-redirect: 'true'
               rules:
                 - host: auth.haus.net
                   paths:
