@@ -39,6 +39,9 @@
   - name: files
     tags:
       - files
+  - name: media
+    tags:
+      - media
   - name: ldap
     tags:
       - ldap

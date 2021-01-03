@@ -265,6 +265,7 @@ resource "kubernetes_ingress" "ing_owncloud" {
       "kubernetes.io/ingress-class" = "nginx"
       "cert-manager.io/cluster-issuer" = "cluster-issuer"
       "nginx.ingress.kubernetes.io/ssl-redirect" = "true"
+      "nginx.ingress.kubernetes.io/proxy-body-size" = "2g"
     }
   }
   spec {
