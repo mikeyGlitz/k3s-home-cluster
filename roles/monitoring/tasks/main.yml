@@ -8,8 +8,8 @@
     state: present
     auth_client_id: admin-cli
     auth_keycloak_url: "https://auth.{{ domain }}/auth"
-    auth_username: "{{ admin_user }}"
-    auth_password: "{{ admin_pw }}"
+    auth_username: "{{ keycloak_user }}"
+    auth_password: "{{ keycloak_password }}"
     auth_realm: master
     name: Monitoring Proxy
     client_id: monitoring-proxy

@@ -1,4 +1,4 @@
-app_user: manager
-app_password: p@$$w0rd!
-admin_user: manager
-admin_password: p@$$w0rd!
+files_user: manager
+files_password: p@$$w0rd!
+keycloak_user: manager
+keycloak_password: p@$$w0rd!

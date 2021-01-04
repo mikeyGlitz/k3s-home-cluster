@@ -20,8 +20,8 @@
         state: present
         auth_client_id: admin-cli
         auth_keycloak_url: "https://auth.{{ domain }}/auth"
-        auth_username: "{{ admin_user }}"
-        auth_password: "{{ admin_password }}"
+        auth_username: "{{ keycloak_user }}"
+        auth_password: "{{ keycloak_password }}"
         auth_realm: master
         name: Files Portal
         client_id: files-portal
@@ -77,8 +77,8 @@
         plan_file: plan.out
         variables:
           db_password: "{{ db_password.stdout }}"
-          app_user: "{{ app_user }}"
-          app_password: "{{ app_password }}"
+          app_user: "{{ files_user }}"
+          app_password: "{{ files_password }}"
           redis_password: "{{ redis_password.stdout }}"
     - name: Apply deployment
       terraform:
@@ -87,8 +87,8 @@
         plan_file: plan.out
         variables:
           db_password: "{{ db_password.stdout }}"
-          app_user: "{{ app_user }}"
-          app_password: "{{ app_password }}"
+          app_user: "{{ files_user }}"
+          app_password: "{{ files_password }}"
           redis_password: "{{ redis_password.stdout }}"
     - pause: minutes=5
     - shell: ls /mnt/external/ | grep -e '^files-owncloud-files-pvc'

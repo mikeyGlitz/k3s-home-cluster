@@ -159,6 +159,11 @@ resource "kubernetes_deployment" "dep_owncloud" {
         }
       }
       spec {
+
+        security_context {
+          fs_group = 1000
+        }
+
         automount_service_account_token = true
         container {
           name = "owncloud-app"

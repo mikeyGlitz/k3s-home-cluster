@@ -3,4 +3,3 @@ domain: haus.net
 keycloak_user: manager
 keycloak_password: p@$$w0rd!
 address: "auth.{{ domain }}"
-kibana_url: "https://monitoring.{{ domain }}/kibana"

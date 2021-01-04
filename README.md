@@ -1,60 +1,73 @@
-# Kuberentes Terraform Scripts
+# Kuberentes Cluster Provisioner
 
-This repository will use terraform to provision resources on a kuberentes cluster.
+This Project contains a configuration-as-code set up which
+utilizes Ansible to provision a Kubernetes cluster using
+[k3s](https://rancher.com/docs/k3s/latest/en/).
 
-## Setting up Terraform
+## Setting up Ansible
 
-### Mac install
-
-```bash
-brew install terraform
-```
-
-### Windows Install
-
-```powershell
-choco install terraform
-```
-
-### Linux Install
+Make sure that python3 and pip are installed.
 
 ```bash
-wget https://releases.hashicorp.com/terraform/0.12.26/terraform_0.12.26_linux_amd64.zip
-unzip terraform_0.12.26_linux_amd64.zipterraform_0.12.26_linux_amd64.zip
-sudo mv terraform /usr/local/bin
+# Debian/Ubuntu
+sudo apt-get update && sudo apt-get install -y python3 python3-pip
+# Mac
+brew install python3
 ```
 
-### Kubectl Provider
-
-This repository uses `kubectl` to provision some Kubernetes YAML manifests
-The [Terraform Kubectl Provider](https://gavinbunney.github.io/terraform-provider-kubectl/docs/provider.html)
-is a 3rd party Terraform provider which uses kubectl to provision YAML charts for Kubernetes
+Install Ansible using pip
 
 ```bash
-$ mkdir -p ~/.terraform.d/plugins && \
-    curl -Ls https://api.github.com/repos/gavinbunney/terraform-provider-kubectl/releases/latest \
-    | jq -r ".assets[] | select(.browser_download_url | contains(\"$(uname -s | tr A-Z a-z)\")) | select(.browser_download_url | contains(\"amd64\")) | .browser_download_url" \
-    | xargs -n 1 curl -Lo ~/.terraform.d/plugins/terraform-provider-kubectl && \
-    chmod +x ~/.terraform.d/plugins/terraform-provider-kubectl
+pip3 install ansible
 ```
 
-## cert-manager install
+> ℹ If you're using [Visual Studio Remote Containers](https://code.visualstudio.com/docs/remote/containers)
+> for VS Code, installing the tools will have already been completed during the container
+> Installation procedures (see the files in `.devcontainer`)
 
-Installing cert-manager requires setting up a CA key pair
+## Running the Ansible Scripts
+
+This script is designed to be run in two steps:
 
 ```bash
-openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
+# First Run
+ansible-playbook --ask-pass playbook.yml --skip-tags=media
+# Last Run
+ansible-playbook --ask-pass playbook.yml --tags=media --extra-vars="plex_token=<plex_claim_token>"
 ```
 
-## Linkerd
+You can obtain a plex token by visiting https://plex.tv/claim
+Plex tokens are only valid for 4 minutes. This playbook takes longer than 4 minutes to run
+which is why the media role needs to be executed separately.
 
-Linkerd requires certificates created with ecdsa encryption
+### Variables
 
-```bash
-openssl ecparam -genkey -name prime256v1 -noout -out key.pem
-openssl req -new -x509 -key key.pem -out ca.crt -days 370
-```
+A set of variables are defined within this playbook.
+The values can be overridden using the Ansible [--extra-vars](https://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#key-value-format)
+argument.
+
+The full variables list is detailed below:
+
+| Variable            | Default   | Description                           |
+|---------------------|-----------|---------------------------------------|
+| terraform_version   | 0.13.1    | Version of Terraform to install       |
+| kubectl_version     | 1.6.2     | Version of Terraform kubectl provider |
+| domain              | haus.net  | Domain name                           |
+| ip_addresses        | []        | List of IP addresses for k8s cluster  |
+| keycloak_user       | manager   | Default Admin user for Keycloak       |
+| keycloak_password   | p@$$w0rd! | Default Admin password for Keycloak   |
+| ldap_password       | p@$$w0rd! | Default password for LDAP admin acct  |
+| plex_token          | ""        | Plex claim token for new plex server  |
+| files_user          | manager   | Default Admin user for Owncloud       |
+| files_password      | p@$$w0rd! | Default Admin password for Owncloud   |
 
 # References
 
-- Injecting Vault secrets [https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/](https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/)
+- [k3sup](https://github.com/alexellis/k3sup)
+- [Ingress-Nginx](https://kubernetes.github.io/ingress-nginx/)
+- [Injecting Vault secrets](https://banzaicloud.com/blog/inject-secrets-into-pods-vault-revisited/)
+- [Logging Operator](https://banzaicloud.com/docs/one-eye/logging-operator/quickstarts/loki-nginx/)
+- [Customizing Linkerd Installation](https://linkerd.io/2/tasks/customize-install/)
+- [Exposing Linkerd Dashboard](https://linkerd.io/2/tasks/exposing-dashboard/)
+- [Linkerd Helm Charts](https://github.com/linkerd/linkerd2/tree/main/charts/) _Look for add-ons_
+- [Exposing TCP Services](https://kubernetes.github.io/ingress-nginx/user-guide/exposing-tcp-udp-services/)
