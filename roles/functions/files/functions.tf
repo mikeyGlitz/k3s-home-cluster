@@ -1,12 +1,13 @@
 variable "client_secret" {
     type = string
-    description = "Keycloak client secret"
+    description = "Openfaas client secret"
 }
 
 variable "client_id" {
     type = string
-    description = "Keycloak client id"
+    description = "Openfaas client id"
 }
+
 
 variable "encryption_key" {
     type = string
@@ -14,7 +15,7 @@ variable "encryption_key" {
 }
 
 resource "vault_generic_secret" "sec_proxy_creds" {
-  path = "secret/keycloak/monitoring-proxy/credential"
+  path = "secret/openfaas/credential"
   data_json = <<JSON
   {
       "client_id": "${ var.client_id }",
@@ -28,7 +29,7 @@ resource "helm_release" "rel_oauth2_proxy" {
   repository = "https://k8s-at-home.com/charts/"
   chart = "oauth2-proxy"
   name = "auth"
-  namespace = "linkerd"
+  namespace = "openfaas"
 
   values = [ 
     <<YAML
@@ -44,7 +45,7 @@ resource "helm_release" "rel_oauth2_proxy" {
     ingress:
       enabled: true
       hosts:
-        - monitoring.haus.net
+        - functions.haus.net
       path: /oauth2
       annotations:
         kubernetes.io/ingress.class: nginx
@@ -53,14 +54,14 @@ resource "helm_release" "rel_oauth2_proxy" {
       tls:
         - secretName: oauth-proxy-tls
           hosts:
-            - monitoring.haus.net
+            - functions.haus.net
     extraEnv:
       - name: OAUTH2_PROXY_CLIENT_ID
-        value: vault:secret/data/keycloak/monitoring-proxy/credential#client_id
+        value: vault:secret/data/openfaas/credential#client_id
       - name: OAUTH2_PROXY_CLIENT_SECRET
-        value: vault:secret/data/keycloak/monitoring-proxy/credential#client_secret
+        value: vault:secret/data/openfaas/credential#client_secret
       - name: OAUTH2_PROXY_COOKIE_SECRET
-        value: vault:secret/data/keycloak/monitoring-proxy/credential#encryption_key
+        value: vault:secret/data/openfaas/credential#encryption_key
     YAML
    ]
 
@@ -91,5 +92,32 @@ resource "helm_release" "rel_oauth2_proxy" {
   set {
     name = "serviceAccount.enabled"
     value = "false"
+  }
+}
+
+resource "helm_release" "rel_openfaas" {
+  repository = "https://openfaas.github.io/faas-netes/"
+  name = "openfaas"
+  chart="openfaas"
+  namespace = "openfaas"
+
+  set {
+      name = "functionNamespace"
+      value = "openfaas-fn"
+  }
+
+  set {
+      name = "generateBasicAuth"
+      value = "false"
+  }
+
+  set {
+      name = "basic_auth"
+      value = "false"
+  }
+
+  set {
+      name = "serviceType"
+      value = "ClusterIP"
   }
 }

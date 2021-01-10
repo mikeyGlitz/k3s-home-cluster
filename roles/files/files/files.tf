@@ -25,7 +25,7 @@ variable "redis_password" {
 }
 
 resource "vault_generic_secret" "sec_db_creds" {
-    path = "secret/owncloud/db/credentials"
+    path = "secret/nextcloud/db/credentials"
     data_json = <<JSON
     {
         "db_user": "${ var.db_user }",
@@ -35,7 +35,7 @@ resource "vault_generic_secret" "sec_db_creds" {
 }
 
 resource "vault_generic_secret" "sec_app_creds" {
-    path = "secret/owncloud/app/credentials"
+    path = "secret/nextcloud/app/credentials"
     data_json = <<JSON
     {
         "app_user": "${ var.app_user }",
@@ -44,84 +44,9 @@ resource "vault_generic_secret" "sec_app_creds" {
     JSON
 }
 
-resource "helm_release" "rel_redis" {
-  chart = "redis"
-  name = "locking"
-  namespace = "files"
-  repository = "https://charts.bitnami.com/bitnami"
-
-  set {
-    name = "password"
-    value = var.redis_password
-  }
-  set {
-    name = "cluster.enabled"
-    value = "false"
-  }
-}
-
-resource "helm_release" "rel_database" {
-  depends_on = [vault_generic_secret.sec_db_creds]
-  repository = "https://charts.bitnami.com/bitnami"
-  name = "database"
-  namespace = "files"
-  chart = "mariadb"
-
-  set {
-    name = "auth.database"
-    value = "owncloud"
-  }
-
-  set {
-    name = "auth.password"
-    value = "vault:secret/data/owncloud/db/credentials#db_password"
-  }
-
-  set {
-    name = "auth.username"
-    value = "vault:secret/data/owncloud/db/credentials#db_user"
-  }
-
-  set {
-    name = "primary.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
-    value = "https://vault.vault-system:8200"
-  }
-
-  set {
-    name = "primary.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
-    value = "vault-cert-tls"
-  }
-
-  set {
-    name = "primary.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
-    value = "default"
-  }
-
-  set {
-    name = "serviceAccount.create"
-    value = "false"
-  }
-
-  set {
-    name = "secondary.replicaCount"
-    value = "0"
-  }
-
-  set {
-    name = "primary.persistence.enabled"
-    value = "true"
-  }
-
-  set {
-    name = "primary.persistence.storageClass"
-    value = "nfs-client"
-  }
-
-}
-
-resource "kubernetes_persistent_volume_claim" "pvc_owncloud" {
+resource "kubernetes_persistent_volume_claim" "pvc_files" {
   metadata {
-    name = "owncloud-files"
+    name = "files"
     namespace = "files"
   }
   spec {
@@ -135,160 +60,116 @@ resource "kubernetes_persistent_volume_claim" "pvc_owncloud" {
   }
 }
 
-resource "kubernetes_deployment" "dep_owncloud" {
-  depends_on = [helm_release.rel_database, vault_generic_secret.sec_app_creds]
-  metadata {
-    name = "owncloud"
-    namespace = "files"
+resource "helm_release" "rel_files_cloud" {
+  repository = "https://nextcloud.github.io/helm/"
+  name="cloudfiles"
+  chart = "nextcloud"
+  namespace="files"
+
+  values = [
+      <<YAML
+        ingress:
+          enabled: true
+          annotations:
+            kubernetes.io/ingress-class: nginx
+            cert-manager.io/cluster-issuer: cluster-issuer
+            nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+            nginx.ingress.kubernetes.io/proxy-body-size: 2g
+          tls:
+            - hosts:
+              - files.haus.net
+              secretName: nextcloud-app-tls
+      YAML
+   ]
+
+  set {
+    name = "nextcloud.host"
+    value = "files.haus.net"
   }
-  spec {
-    selector {
-      match_labels = {
-        "app" = "owncloud"
-      }
-    }
-    template {
-      metadata {
-        annotations = {
-          "vault.security.banzaicloud.io/vault-addr" = "https://vault.vault-system:8200"
-          "vault.security.banzaicloud.io/vault-tls-secret" = "vault-cert-tls"
-          "vault.security.banzaicloud.io/vault-role" = "default"
-        }
-        labels = {
-          "app" = "owncloud"
-        }
-      }
-      spec {
 
-        security_context {
-          fs_group = 1000
-        }
-
-        automount_service_account_token = true
-        container {
-          name = "owncloud-app"
-          image = "owncloud/server:10.6"
-          # env {
-          #   name = "OWNCLOUD_APPS_INSTALL"
-          #   value = "files_pdfviewer,metadata,openidconnect,files_mediaviewer,drawio,activity,camerarawpreviews"
-          # }
-          env {
-            name = "OWNCLOUD_ADMIN_USERNAME"
-            value = "vault:secret/data/owncloud/app/credentials#app_user"
-          }
-          env {
-            name = "OWNCLOUD_ADMIN_PASSWORD"
-            value = "vault:secret/data/owncloud/app/credentials#app_password"
-          }
-          env {
-            name = "OWNCLOUD_DB_USERNAME"
-            value = "vault:secret/data/owncloud/db/credentials#db_user"
-          }
-          env {
-            name = "OWNCLOUD_DB_PASSWORD"
-            value = "vault:secret/data/owncloud/db/credentials#db_password"
-          }
-          env {
-            name = "OWNCLOUD_DB_HOST"
-            value = "database-mariadb"
-          }
-          env {
-            name = "OWNCLOUD_DB_PORT"
-            value = "5432"
-          }
-          env {
-            name = "OWNCLOUD_DB_TYPE"
-            value = "mysql"
-          }
-          env {
-            name = "OWNCLOUD_VOLUME_ROOT"
-            value = "/mnt/external/owncloud"
-          }
-
-          env {
-            name = "OWNCLOUD_REDIS_ENABLED"
-            value = "true"
-          }
-
-          env {
-            name = "OWNCLOUD_REDIS_HOST"
-            value = "locking-redis-master"
-          }
-
-          env {
-            name = "OWNCLOUD_REDIS_PASSWORD"
-            value = var.redis_password
-          }
-
-          port {
-            container_port = 8080
-          }
-
-          volume_mount {
-            name = "owncloud-files"
-            mount_path = "/mnt/external/owncloud"
-          }
-        }
-        volume {
-          name = "owncloud-files"
-          persistent_volume_claim {
-            claim_name = "owncloud-files"
-          }
-        }
-      }
-    }
+  set {
+      name = "nextcloud.username"
+      value = "vault:secret/data/nextcloud/app/credentials#app_user"
   }
-}
+  set {
+      name = "nextcloud.password"
+      value = "vault:secret/data/nextcloud/app/credentials#app_password"
+  }
+  set {
+      name = "internalDatabase.enabled"
+      value = "false"
+  }
+  set {
+      name = "mariadb.enabled"
+      value = "true"
+  }
+  set {
+      name = "mariadb.db.password"
+      value = "vault:secret/data/nextcloud/db/credentials#db_password"
+  }
+  set {
+      name = "mariadb.db.user"
+      value = "vault:secret/data/nextcloud/db/credentials#db_user"
+  }
+  set {
+      name = "mariadb.master.persistence.storageClass"
+      value = "nfs-client"
+  }
+  set {
+      name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+      value = "https://vault.vault-system:8200"
+  }
+  set {
+      name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+      value = "vault-cert-tls"
+  }
+  set {
+      name = "mariadb.master.annotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+      value = "default"
+  }
+  set {
+      name = "persistence.enabled"
+      value = "true"
+  }
+  set {
+      name = "persistence.existingClaim"
+      value = "files"
+  }
 
-resource "kubernetes_service" "svc_owncloud" {
-  metadata {
-    name = "owncloud"
-    namespace = "files"
-    labels = {
-      "app" = "owncloud"
-    }
+  set {
+      name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+      value = "https://vault.vault-system:8200"
   }
-  spec {
-    selector = {
-      "app" = "owncloud"
-    }
-    port {
-      port = 80
-      target_port = "8080"
-    }
+  set {
+      name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+      value = "vault-cert-tls"
   }
-}
+  set {
+      name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+      value = "default"
+  }
+  set {
+      name = "livenessProbe.enabled"
+      value ="false"
+  }
 
-resource "kubernetes_ingress" "ing_owncloud" {
-  metadata {
-    name = "owncloud"
-    namespace = "files"
-    labels = {
-      "app" = "owncloud"
-    }
-    annotations = {
-      "kubernetes.io/ingress-class" = "nginx"
-      "cert-manager.io/cluster-issuer" = "cluster-issuer"
-      "nginx.ingress.kubernetes.io/ssl-redirect" = "true"
-      "nginx.ingress.kubernetes.io/proxy-body-size" = "2g"
-    }
+  set {
+      name = "readinessProbe.enabled"
+      value ="false"
   }
-  spec {
-    rule {
-      host = "files.haus.net"
-      http {
-        path {
-          path = "/"
-          backend {
-            service_name = "owncloud"
-            service_port = "80"
-          }
-        }
-      }
-    }
-    tls {
-      hosts = [ "files.haus.net" ]
-      secret_name = "owncloud-cert-tls"
-    }
+
+  set {
+      name = "redis.enabled"
+      value = "true"
+  }
+
+  set {
+      name = "redis.password"
+      value = var.redis_password
+  }
+
+  set {
+      name = "redis.usePassword"
+      value = "true"
   }
 }

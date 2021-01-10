@@ -1,0 +1,4 @@
+master_node: rivendell
+domain: haus.net
+keycloak_user: manager
+keycloak_password: p@$$w0rd!

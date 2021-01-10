@@ -13,8 +13,16 @@
         name: ingress-nginx
         chart_repo_url: https://kubernetes.github.io/ingress-nginx
         release_namespace: ingress-nginx
-        values:
-          config.enable-opentracing: "true"
-          config.zipkin-collector-host: linkerd-collector.linkerd:55678
+        release_values:
+          controller:
+            config:
+              enable-opentracing: "true"
+              zipkin-collector-host: linkerd-collector.linkerd:55678
+            podAnnotations:
+              linkerd.io/inject: enabled
+              config.linkerd.io/trace-collector: linkerd-collector.linkerd:55678
+              config.alpha.linkerd.io/trace-collector-service-account: linkerd-collector
+          tcp:
+            32400: "plex-tcp.files.svc.cluster.local:32400"
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"

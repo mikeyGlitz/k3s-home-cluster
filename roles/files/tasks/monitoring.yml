@@ -51,4 +51,4 @@
         match:
         - select:
             labels:
-              app: owncloud
+              app.kubernetes.io/name: nextcloud

@@ -1,0 +1,132 @@
+---
+- name: Deploy Openfaas
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"
+  block:
+    - name: Get vault IP
+      shell: "kubectl get svc vault -n vault-system -o jsonpath=\"{.spec.clusterIP}\""
+      register: vault_server
+    - name: Get vault token
+      shell: "kubectl get secrets -n vault-system vault-unseal-keys -o jsonpath={.data.vault-root} | base64 --decode"
+      register: vault_token
+    - name: Generate client secret
+      shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
+      register: client_secret
+    - name: Generate encryption key
+      shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
+      register: encryption_key
+    - name: Create Keycloak client
+      community.general.keycloak_client:
+        state: present
+        auth_client_id: admin-cli
+        auth_keycloak_url: "https://auth.{{ domain }}/auth"
+        auth_username: "{{ keycloak_user }}"
+        auth_password: "{{ keycloak_password }}"
+        auth_realm: master
+        name: Openfaas Portal
+        client_id: openfaas
+        client_authenticator_type: client-secret
+        secret: "{{ client_secret.stdout }}"
+        realm: hausnet
+        protocol_mappers:
+          - config:
+              included.client.audience: "openfaas-portal"
+              id.token.claim: "false"
+              access.token.claim: "true"
+            name: openfaas-portal-mapper
+            protocol: openid-connect
+            protocolMapper: oidc-audience-mapper
+          - name: "openfaas-group-mapper"
+            protocol: "openid-connect"
+            protocolMapper: "oidc-group-membership-mapper"
+            config: 
+              id.token.claim: "true"
+              access.token.claim: "true"
+              claim.name: "groups"
+              userinfo.token.claim: "true"
+        redirect_uris:
+          - https://functions.haus.net/*
+        web_origins:
+          - "*"
+        validate_certs: no
+    - community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: openfaas
+    - community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: openfaas-fn
+            annotations:
+              linkerd.io/inject: enabled
+    - file: path=terraform/functions state=directory
+    - name: Copy terraform config
+      template:
+          dest: "terraform/functions/terraform.tf" # required. Location to render the template to on the remote machine.
+          src: terraform.tf.j2 # required. Path of a Jinja2 formatted template on the Ansible controller. This can be a relative or absolute path.
+    - copy: src=functions.tf dest=terraform/functions/functions.tf
+    - stat:
+        path: "terraform/functions/.terraform"
+      register: terraform_initialized
+    - shell:
+        cmd: terraform init
+        chdir: "terraform/functions"
+      when: terraform_initialized.stat.exists != true
+    - name: Plan deployment
+      terraform:
+        project_path: "terraform/functions" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+        state: planned # not required. choices: planned;present;absent. Goal state of given stage/project
+        plan_file: plan.out
+        variables:
+          client_id: "openfaas"
+          client_secret: "{{ client_secret.stdout }}"
+          encryption_key: "{{ encryption_key.stdout }}"
+    - name: Apply deployment
+      terraform:
+        project_path: "terraform/functions" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
+        state: present # not required. choices: planned;present;absent. Goal state of given stage/project
+        plan_file: plan.out
+    - shell: kubectl -n openfaas get deploy gateway -o yaml | .linkerd2/bin/linkerd inject --skip-outbound-ports=4222 - | kubectl apply -f -
+    - name: Deploy ingress
+      community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress 
+          metadata:
+            name: openfaas-gateway
+            namespace: openfaas
+            annotations:
+              kubernetes.io/ingress-class: nginx
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
+              nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
+              cert-manager.io/cluster-issuer: cluster-issuer
+              nginx.ingress.kubernetes.io/upstream-vhost: $service_name.$namespace.svc.cluster.local:8080
+              nginx.ingress.kubernetes.io/configuration-snippet: |
+                proxy_set_header Origin "";
+                proxy_hide_header l5d-remote-ip;
+                proxy_hide_header l5d-server-id;
+          spec:
+            rules:
+              - host: "functions.haus.net"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: gateway
+                          port:
+                            number: 8080
+            tls:
+              - hosts:
+                - "functions.haus.net"
+                secretName: openfaas-tls-cert

@@ -6,7 +6,6 @@
 - name: Prepare Terraform
   block:
     - name: Get vault IP
-      environment:
       shell: "kubectl get svc vault -n vault-system -o jsonpath=\"{.spec.clusterIP}\""
       register: vault_server
     - name: Get vault token
@@ -90,8 +89,8 @@
           app_user: "{{ files_user }}"
           app_password: "{{ files_password }}"
           redis_password: "{{ redis_password.stdout }}"
-    - pause: minutes=5
-    - shell: ls /mnt/external/ | grep -e '^files-owncloud-files-pvc'
+    - pause: minutes=10
+    - shell: ls /mnt/external/ | grep -e '^files-files-pvc'
       register: file_folder
     - name: Update config with memcache settings
       become: yes
@@ -100,19 +99,15 @@
           insertbefore: '\);' # not required. choices: BOF;*regex*. If specified, the block will be inserted before the last match of specified regular expression. A special value is available; C(BOF) for inserting the block at the beginning of the file.  If specified regular expression has no matches, the block will be inserted at the end of the file.
           state: present # not required. choices: absent;present. Whether the block should be there or not.
           block: |
-                'openid-connect' => array(
-                  'provider-url' => 'https://auth.{{ domain }}/auth/realms/hausnet',
-                  'client-id' => 'files-portal',
-                  'client-secret' => '{{ client_secret.stdout }}',
-                  'loginButtonName' => 'Home Network SSO',
-                  'autoRedirectOnLoginPage' => false,
-                  'mode' => 'userid',
-                  'search-attribute' => 'preferred_username',
-                  'post_logout_redirect_uri' => 'https://files.{{ domain }}',
-                  'insecure' => true,
-                ),
+            'oidc_login_proivder_url' => 'https://auth.{{ domain }}/auth/realms/hausnet',
+            'oidc_login_client_id' => 'files-portal',
+            'oidc_login_client_secret' => '{{ client_secret.stdout }}',
+            'oidc_login_button_text' => 'Home Network SSO',
+            'oidc_login_scope' => 'openid profile',
+            'mode' => 'userid',
+            'oidc_login_tls_verify' => true,
     - name: Restart files deployment
-      shell: kubectl rollout restart -n files deployments/owncloud
+      shell: kubectl rollout restart -n files deployments/cloudfiles-nextcloud
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
     KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"

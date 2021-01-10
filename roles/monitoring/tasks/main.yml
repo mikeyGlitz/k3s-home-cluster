@@ -17,15 +17,14 @@
     secret: "{{ client_secret.stdout }}"
     realm: hausnet
     protocol_mappers:
-      - config:
-          full.path: "true"
+      - name: "monitoring-group-mapper"
+        protocol: "openid-connect"
+        protocolMapper: "oidc-group-membership-mapper"
+        config: 
           id.token.claim: "true"
           access.token.claim: "true"
           claim.name: "groups"
           userinfo.token.claim: "true"
-        name: monitoring-group-mapper
-        protocol: openid-connect
-        protocolMapper: oidc-group-membership-mapper
       - config:
           included.client.audience: "monitoring-proxy"
           id.token.claim: "false"

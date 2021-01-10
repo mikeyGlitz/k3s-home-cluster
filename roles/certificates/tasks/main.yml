@@ -1,41 +1,45 @@
 ---
-- name: Ensure openssl
-  apt: name="openssl" state="present"
-  become: yes
-- name: Ensure certificate dir
-  file:
-    path: "/home/{{ ansible_user }}/terraform/ca"
-    state: directory
-    mode: 0755
 - name: Generate CA Key pair
   block:
-    - shell:
-        cmd: "openssl ecparam -genkey -name prime256v1 -noout -out terraform/ca/key.pem"
-    - shell:
-        cmd: "openssl req -new -x509 -key terraform/ca/key.pem -out terraform/ca/ca.crt -days 370 -subj='/CN={{ ca_commonname}}/C={{ ca_country }}/ST={{ ca_state }}'"
+    - local_action: 
+        module: shell
+        cmd: openssl ecparam -genkey -name prime256v1 -noout -out key.pem
+    - local_action: 
+        module: shell
+        cmd: openssl req -new -x509 -key key.pem -out ca.crt -days 370 -subj='/CN={{ ca_commonname}}/C={{ ca_country }}/ST={{ ca_state }}'
 - name: Provision certificate-manager on Kubernetes
   block:
-    - copy: dest="/home/{{ ansible_user }}/terraform/ca/{{ item }}" src="{{ item }}"
-      with_items:
-        - cert-manager.tf
-        - terraform.tf
-    - stat:
-        path: "terraform/ca/.terraform"
-      register: terraform_initialized
-    - shell:
-        cmd: terraform init
-        chdir: "terraform/ca"
-      when: terraform_initialized.stat.exists != true
-    - name: Plan deployment
-      terraform:
-        project_path: "terraform/ca" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
-        state: planned # not required. choices: planned;present;absent. Goal state of given stage/project
-        plan_file: plan.out
-    - name: Apply deployment
-      terraform:
-        project_path: "terraform/ca" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
-        state: present # not required. choices: planned;present;absent. Goal state of given stage/project
-        plan_file: plan.out
+    - community.kubernetes.helm:
+        chart_repo_url: https://charts.jetstack.io
+        chart_ref: cert-manager
+        name: cert-manager
+        release_namespace: cert-manager
+        create_namespace: yes
+        values:
+          installCRDs: 'true'
+    - community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: ca-key-pair
+            namespace: cert-manager
+          type: kubernetes.io/tls
+          data:
+            tls.key: "{{ lookup('file', playbook_dir + '/key.pem') | b64encode }}"
+            tls.crt: "{{ lookup('file', playbook_dir + '/ca.crt') | b64encode }}"
+    - pause: minutes=3
+    - community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: cluster-issuer
+            namespace: cert-manager
+          spec:
+            ca:
+              secretName: ca-key-pair
   environment:
-    KUBECONFIG: ~/kubeconfig
-    KUBE_CONFIG_PATH: ~/kubeconfig
+    KUBECONFIG: /home/{{ ansible_user }}/kubeconfig

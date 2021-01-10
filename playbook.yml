@@ -11,13 +11,13 @@
     tags:
       - ca
       - certificate
+  - name: mesh
+    tags:
+      - mesh
   - name: ingress
     tags:
       - ingress
       - proxy
-  - name: mesh
-    tags:
-      - mesh
   - name: nas
     tags:
       - nas
@@ -49,3 +49,8 @@
   - name: monitoring
     tags:
       - monitoring
+  - name: functions
+    tags:
+      - function
+      - functions
+      - openfaas

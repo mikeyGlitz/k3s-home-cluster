@@ -1,38 +1,48 @@
 ---
-- name: Prepare project
-  block:
-    - shell: curl -sL https://run.linkerd.io/install | sh
-    - file:
-        path: "/home/{{ ansible_user }}/terraform/mesh"
-        mode: 0755
-        state: directory
-    - copy:
-        dest: "/home/{{ ansible_user }}/terraform/mesh/{{ item }}"
-        src: "{{ item }}"
-      with_items:
-        - terraform.tf
-        - linkerd.tf
-        - config.yml
-    - stat: path="terraform/mesh/.terraform"
-      register: terraform_initialized
-    - shell:
-        cmd: terraform init
-        chdir: "terraform/mesh"
-      when: terraform_initialized.stat.exists == false
-- name: Plan deployment
-  terraform:
-    project_path: "terraform/mesh" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
-    state: planned # not required. choices: planned;present;absent. Goal state of given stage/project
-    plan_file: plan.out
+- name: Install linkerd CLI
+  shell: curl -sL https://run.linkerd.io/install | sh
+- name: Copy linkerd config file
+  copy: src=config.yml dest=~/
+- name: Create linkerd namespace
+  community.kubernetes.k8s:
+    state: present
+    api_version: v1
+    kind: Namespace
+    name: linkerd
   environment:
     KUBECONFIG: ~/kubeconfig
-- name: Apply deployment
-  terraform:
-    project_path: "terraform/mesh" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
-    state: present # not required. choices: planned;present;absent. Goal state of given stage/project
-    plan_file: plan.out
+- name: Create Linkerd Certificate
+  community.kubernetes.k8s:
+    state: present
+    definition:
+      apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: linkerd-identity-issuer
+        namespace: linkerd
+      spec:
+        secretName: linkerd-identity-issuer
+        duration: 48h
+        renewBefore: 25h
+        issuerRef:
+          name: cluster-issuer
+          kind: ClusterIssuer
+        commonName: identity.linkerd.cluster.local
+        dnsNames:
+        - identity.linkerd.cluster.local
+        isCA: true
+        privateKey:
+          algorithm: ECDSA
+        usages:
+        - cert sign
+        - crl sign
+        - server auth
+        - client auth
   environment:
     KUBECONFIG: ~/kubeconfig
-    KUBE_CONFIG_PATH: ~/kubeconfig
+  notify:
+    - init_linkerd
+- name: Flush handlers
+  meta: flush_handlers
 - name: Wait for linkerd to initialize
   pause: minutes=3
