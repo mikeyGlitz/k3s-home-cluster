@@ -5,7 +5,7 @@
 	"build": {
 		"dockerfile": "Dockerfile",
 		// Update 'VARIANT' to pick an Debian version: buster, stretch
-		"args": { "VARIANT": "buster" }
+		"args": { "VARIANT": "3.13" }
 	},
 
 	// Set *default* container specific settings.json values on container create.
@@ -19,10 +19,12 @@
 		"michelemelluso.gitignore",
 		"eamodio.gitlens",
 		"redhat.vscode-yaml",
-		"vscoss.vscode-ansible",
+		// "vscoss.vscode-ansible",
+		"zbr.vscode-ansible",
 		"hashicorp.terraform",
 		"ms-kubernetes-tools.vscode-kubernetes-tools"
 	],
+	"mounts": ["source=${localEnv:HOME}${localEnv:USERPROFILE}\\.kube,type=bind,target=/home/vscode/.kube,consistency=cached"],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -35,6 +37,5 @@
 
 	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
 	// "remoteUser": "vscode"
-	"remoteUser": "ansible",
-	"containerUser": "ansible"
+	"remoteUser": "vscode",
 }
