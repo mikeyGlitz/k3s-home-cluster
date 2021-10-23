@@ -42,10 +42,6 @@
   - name: media
     tags:
       - media
-  - name: ldap
-    tags:
-      - ldap
-      - directory
   - name: monitoring
     tags:
       - monitoring

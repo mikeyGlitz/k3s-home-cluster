@@ -50,14 +50,14 @@
         web_origins:
           - "*"
         validate_certs: no
-    - community.kubernetes.k8s:
+    - kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: v1
           kind: Namespace
           metadata:
             name: openfaas
-    - community.kubernetes.k8s:
+    - kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: v1
@@ -88,14 +88,16 @@
           client_id: "openfaas"
           client_secret: "{{ client_secret.stdout }}"
           encryption_key: "{{ encryption_key.stdout }}"
+          openfaas_password: "{{ openfaas_password }}"
     - name: Apply deployment
       terraform:
         project_path: "terraform/functions" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
         state: present # not required. choices: planned;present;absent. Goal state of given stage/project
         plan_file: plan.out
     - shell: kubectl -n openfaas get deploy gateway -o yaml | .linkerd2/bin/linkerd inject --skip-outbound-ports=4222 - | kubectl apply -f -
+    - shell: kubectl -n openfaas set env deployment/gateway -c gateway -e logs_provider_url=http://loki-openfaas-loki.openfaas:9191/
     - name: Deploy ingress
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: networking.k8s.io/v1

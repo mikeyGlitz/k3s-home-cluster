@@ -39,6 +39,13 @@
     validate_certs: no
 - name: Deploy proxy resources
   block:
+    - name: Generate linkerd-viz configuration
+      shell: "/home/{{ansible_user}}/.linkerd/bin/linkerd viz install >> /home/{{ansible_user}}/viz.yaml"
+    - copy: src={{ item }} dest={{ item }}
+      with_items:
+        - kustomization.yaml
+        - grafana.yml
+    - shell: kubectl kustomize build . | kubectl apply -f -
     - file: path="terraform/monitoring" state="directory"
     - name: Get vault IP
       shell: "kubectl get svc vault -n vault-system -o jsonpath=\"{.spec.clusterIP}\""

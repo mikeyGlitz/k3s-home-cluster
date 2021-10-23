@@ -2,7 +2,7 @@
 - name: Create Vault Certificate
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     state: present
     definition:
       apiVersion: cert-manager.io/v1alpha2
@@ -31,7 +31,7 @@
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
   block:
     - name: Create vault service account Role
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         state: present
         definition:
           kind: ServiceAccount
@@ -40,7 +40,7 @@
             name: vault
             namespace: vault-system
     - name: Create vault-secrets Role
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         state: present
         definition:
           kind: Role
@@ -56,7 +56,7 @@
               verbs:
                 - "*"
     - name: Create vault rolebinding
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         state: present
         definition:
           kind: RoleBinding
@@ -72,7 +72,7 @@
             - kind: ServiceAccount
               name: vault
     - name: Create vault clusterrolebinding
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: rbac.authorization.k8s.io/v1
@@ -91,7 +91,7 @@
 - name: Create vault volume
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     state: present
     definition:
       apiVersion: v1
@@ -125,7 +125,7 @@
 - name: Create shared vault
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     state: present
     definition:
       kind: Vault

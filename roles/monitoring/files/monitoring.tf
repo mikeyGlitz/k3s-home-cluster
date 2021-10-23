@@ -24,72 +24,100 @@ resource "vault_generic_secret" "sec_proxy_creds" {
   JSON
 }
 
+resource "kubernetes_config_map" "cm_auth_proxy_config" {
+  metadata {
+    name = "oauth2-proxy-config"
+    namespace = "linkerd-viz"
+  }
+  data = {
+    "oauth2_proxy.cfg" = <<CFG
+        provider = "keycloak"
+        email_domains = ["*"]
+        scope = "oidc"
+        login_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth"
+        redeem_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token"
+        validate_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo"
+        keycloak_groups = ["/admin"]
+        ssl_insecure_skip_verify = true
+    CFG
+  }
+}
+
 resource "helm_release" "rel_oauth2_proxy" {
-  repository = "https://k8s-at-home.com/charts/"
-  chart = "oauth2-proxy"
-  name = "auth"
-  namespace = "linkerd"
-
-  values = [ 
-    <<YAML
-    extraArgs:
-      provider: keycloak
-      email-domain: "*"
-      scope: "openid profile email"
-      login-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth
-      redeem-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token
-      validate-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo
-      keycloak-group: /admin
-      ssl-insecure-skip-verify: true
-    ingress:
-      enabled: true
-      hosts:
-        - monitoring.haus.net
-      path: /oauth2
-      annotations:
-        kubernetes.io/ingress.class: nginx
-        cert-manager.io/cluster-issuer: cluster-issuer
-        nginx.ingress.kubernetes.io/ssl-redirect: 'true'
-      tls:
-        - secretName: oauth-proxy-tls
-          hosts:
-            - monitoring.haus.net
-    extraEnv:
-      - name: OAUTH2_PROXY_CLIENT_ID
-        value: vault:secret/data/keycloak/monitoring-proxy/credential#client_id
-      - name: OAUTH2_PROXY_CLIENT_SECRET
-        value: vault:secret/data/keycloak/monitoring-proxy/credential#client_secret
-      - name: OAUTH2_PROXY_COOKIE_SECRET
-        value: vault:secret/data/keycloak/monitoring-proxy/credential#encryption_key
-    YAML
-   ]
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "oauth2-proxy"
+  name       = "auth"
+  namespace = "linkerd-viz"
 
   set {
-    name = "proxyVarsAsSecrets"
-    value = "false"
+    name  = "ingress.enabled"
+    value = "true"
+  }
+  set {
+    name  = "ingress.pathType"
+    value = "Prefix"
+  }
+  set {
+    name  = "ingress.hostname"
+    value = "monitoring.haus.net"
   }
 
   set {
-    name = "podAnnotations.linkerd\\.io/inject"
-    value = "enabled"
+    name  = "ingress.path"
+    value = "/oauth2"
   }
 
   set {
-    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+    name  = "ingress.annotations.kubernetes\\.io/class\\.name"
+    value = "nginx"
+  }
+  set {
+    name  = "ingress.annotations.cert-manager\\.io/cluster-issuer"
+    value = "cluster-issuer"
+  }
+  set {
+    name  = "ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/ssl-redirect"
+    value = "'true'"
+  }
+  set {
+    name  = "ingress.tls"
+    value = "true"
+  }
+
+  set {
+    name  = "configuration.clientID"
+    value = "vault:secret/data/monitoring-proxy/credential#client_id"
+  }
+  set {
+    name  = "configuration.clientSecret"
+    value = "vault:secret/data/monitoring-proxy/credential#client_secret"
+  }
+  set {
+    name  = "configuration.cookieSecret"
+    value = "vault:secret/data/monitoring-proxy/credential#encryption_key"
+  }
+
+  set {
+    name  = "configuration.existingConfigmap"
+    value = "oauth2-proxy-config"
+  }
+
+  set {
+    name  = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
     value = "https://vault.vault-system:8200"
   }
 
   set {
-    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+    name  = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
     value = "default"
   }
   set {
-    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+    name  = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
     value = "vault-cert-tls"
   }
 
   set {
-    name = "serviceAccount.enabled"
+    name  = "serviceAccount.create"
     value = "false"
   }
 }

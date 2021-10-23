@@ -1,123 +1,211 @@
 variable "client_secret" {
-    type = string
-    description = "Openfaas client secret"
+  type        = string
+  description = "Openfaas client secret"
 }
 
 variable "client_id" {
-    type = string
-    description = "Openfaas client id"
+  type        = string
+  description = "Openfaas client id"
 }
 
 
 variable "encryption_key" {
-    type = string
-    description = "Cookie encryption key"
+  type        = string
+  description = "Cookie encryption key"
+}
+
+variable "openfaas_user" {
+  type = string
+  description = "Openfaas console username"
+  default = "openfaas"
+}
+
+variable "openfaas_password" {
+  type = string
+  description = "OpenFaas Basic Auth password"
 }
 
 resource "vault_generic_secret" "sec_proxy_creds" {
-  path = "secret/openfaas/credential"
+  path      = "secret/openfaas/credential"
   data_json = <<JSON
   {
-      "client_id": "${ var.client_id }",
-      "client_secret": "${ var.client_secret }",
-      "encryption_key": "${ var.encryption_key }"
+      "client_id": "${var.client_id}",
+      "client_secret": "${var.client_secret}",
+      "encryption_key": "${var.encryption_key}",
+      "openfaas_password": "${var.openfaas_password}"
   }
   JSON
 }
 
+resource "kubernetes_config_map" "cm_auth_proxy_config" {
+  metadata {
+    name = "oauth2-proxy-config"
+    namespace = "openfaas"
+  }
+  data = {
+    "oauth2_proxy.cfg" = <<CFG
+        provider = "keycloak"
+        email_domains = ["*"]
+        scope = "oidc"
+        login_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth"
+        redeem_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token"
+        validate_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo"
+        keycloak_groups = ["/admin"]
+        ssl_insecure_skip_verify = true
+        skip_auth_routes = [
+          "^/function",
+          "^/system"
+        ]
+    CFG
+  }
+}
+
 resource "helm_release" "rel_oauth2_proxy" {
-  repository = "https://k8s-at-home.com/charts/"
-  chart = "oauth2-proxy"
-  name = "auth"
-  namespace = "openfaas"
-
-  values = [ 
-    <<YAML
-    extraArgs:
-      provider: keycloak
-      email-domain: "*"
-      scope: "openid profile email"
-      login-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth
-      redeem-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token
-      validate-url: https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo
-      keycloak-group: /admin
-      ssl-insecure-skip-verify: true
-    ingress:
-      enabled: true
-      hosts:
-        - functions.haus.net
-      path: /oauth2
-      annotations:
-        kubernetes.io/ingress.class: nginx
-        cert-manager.io/cluster-issuer: cluster-issuer
-        nginx.ingress.kubernetes.io/ssl-redirect: 'true'
-      tls:
-        - secretName: oauth-proxy-tls
-          hosts:
-            - functions.haus.net
-    extraEnv:
-      - name: OAUTH2_PROXY_CLIENT_ID
-        value: vault:secret/data/openfaas/credential#client_id
-      - name: OAUTH2_PROXY_CLIENT_SECRET
-        value: vault:secret/data/openfaas/credential#client_secret
-      - name: OAUTH2_PROXY_COOKIE_SECRET
-        value: vault:secret/data/openfaas/credential#encryption_key
-    YAML
-   ]
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "oauth2-proxy"
+  name       = "auth"
+  namespace  = "openfaas"
 
   set {
-    name = "proxyVarsAsSecrets"
-    value = "false"
+    name  = "ingress.enabled"
+    value = "true"
+  }
+  set {
+    name  = "ingress.pathType"
+    value = "Prefix"
+  }
+  set {
+    name  = "ingress.hostname"
+    value = "functions.haus.net"
   }
 
   set {
-    name = "podAnnotations.linkerd\\.io/inject"
-    value = "enabled"
+    name  = "ingress.path"
+    value = "/oauth2"
   }
 
   set {
-    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+    name  = "ingress.annotations.kubernetes\\.io/class\\.name"
+    value = "nginx"
+  }
+  set {
+    name  = "ingress.annotations.cert-manager\\.io/cluster-issuer"
+    value = "cluster-issuer"
+  }
+  set {
+    name  = "ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/ssl-redirect"
+    value = "'true'"
+  }
+  set {
+    name  = "ingress.tls"
+    value = "true"
+  }
+
+  set {
+    name  = "configuration.clientID"
+    value = "vault:secret/data/openfaas/credential#client_id"
+  }
+  set {
+    name  = "configuration.clientSecret"
+    value = "vault:secret/data/openfaas/credential#client_secret"
+  }
+  set {
+    name  = "configuration.cookieSecret"
+    value = "vault:secret/data/openfaas/credential#encryption_key"
+  }
+
+  set {
+    name  = "configuration.existingConfigmap"
+    value = "oauth2-proxy-config"
+  }
+
+  set {
+    name  = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
     value = "https://vault.vault-system:8200"
   }
 
   set {
-    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+    name  = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
     value = "default"
   }
   set {
-    name = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+    name  = "podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
     value = "vault-cert-tls"
   }
 
   set {
-    name = "serviceAccount.enabled"
+    name  = "serviceAccount.create"
     value = "false"
+  }
+}
+
+resource "kubernetes_secret" "sec_basic_auth" {
+  metadata {
+    name = "basic-auth"
+    namespace = "openfaas"
+    annotations = {
+      "vault.security.banzaicloud.io/vault-addr" = "https://vault.vault-system:8200"
+      "vault.security.banzaicloud.io/vault-role" = "default"
+      "vault.security.banzaicloud.io/vault-skip-verify" = "true"
+      "vault.security.banzaicloud.io/vault-path" = "kubernetes"
+    }
+  }
+  data = {
+    "basic-auth-user" = var.openfaas_user
+    "basic-auth-password" = "vault:secret/data/openfaas/credential#openfaas_password"
   }
 }
 
 resource "helm_release" "rel_openfaas" {
   repository = "https://openfaas.github.io/faas-netes/"
-  name = "openfaas"
-  chart="openfaas"
+  name       = "openfaas"
+  chart      = "openfaas"
+  namespace  = "openfaas"
+
+  set {
+    name  = "functionNamespace"
+    value = "openfaas-fn"
+  }
+
+  set {
+    name  = "generateBasicAuth"
+    value = "false"
+  }
+
+  set {
+    name  = "basic_auth"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceType"
+    value = "ClusterIP"
+  }
+
+  set {
+    name  = "ingressOperator.create"
+    value = "true"
+  }
+}
+
+resource "helm_release" "rel_cron_connector" {
+  name = "cron"
   namespace = "openfaas"
+  chart = "cron-connector"
+  repository = "https://openfaas.github.io/faas-netes/"
+}
 
+resource "helm_release" "rel_openfaas_loki" {
+  name       = "loki"
+  namespace  = "openfaas"
+  repository = "https://lucasroesler.com/openfaas-loki"
+  chart      = "openfaas-loki"
   set {
-      name = "functionNamespace"
-      value = "openfaas-fn"
+    name  = "lokiURL"
+    value = "http://loki.logging:3100"
   }
-
   set {
-      name = "generateBasicAuth"
-      value = "false"
-  }
-
-  set {
-      name = "basic_auth"
-      value = "false"
-  }
-
-  set {
-      name = "serviceType"
-      value = "ClusterIP"
+    name  = "logLevel"
+    value = "DEBUG"
   }
 }

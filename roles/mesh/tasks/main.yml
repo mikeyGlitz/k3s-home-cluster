@@ -1,10 +1,8 @@
 ---
 - name: Install linkerd CLI
   shell: curl -sL https://run.linkerd.io/install | sh
-- name: Copy linkerd config file
-  copy: src=config.yml dest=~/
 - name: Create linkerd namespace
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     state: present
     api_version: v1
     kind: Namespace
@@ -12,7 +10,7 @@
   environment:
     KUBECONFIG: ~/kubeconfig
 - name: Create Linkerd Certificate
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     state: present
     definition:
       apiVersion: cert-manager.io/v1

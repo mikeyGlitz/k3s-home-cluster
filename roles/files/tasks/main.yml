@@ -47,7 +47,7 @@
       shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
       register: redis_password
     - debug: msg="{{ redis_password.stdout }}"
-    - community.kubernetes.k8s:
+    - kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: v1

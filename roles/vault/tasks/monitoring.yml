@@ -3,7 +3,7 @@
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
   block:
-    - community.kubernetes.k8s:
+    - kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: logging.banzaicloud.io/v1beta1
@@ -15,7 +15,7 @@
             fluentd: {}
             fluentbit: {}
             controlNamespace: logging
-    - community.kubernetes.k8s:
+    - kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: logging.banzaicloud.io/v1beta1

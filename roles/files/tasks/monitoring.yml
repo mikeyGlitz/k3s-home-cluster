@@ -1,6 +1,6 @@
 ---
 - name: Create Logging resource
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     state: present
     definition:
       apiVersion: logging.banzaicloud.io/v1beta1
@@ -13,7 +13,7 @@
         fluentbit: {}
         controlNamespace: logging
 - name: Create Flow resource
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     state: present
     definition:
       apiVersion: logging.banzaicloud.io/v1beta1
