@@ -53,9 +53,8 @@
       - grafana.yml
       - kustomization.yml
     - name: Deploy grafana updates
-      shell: '/home/{{ ansible_user }}/.linkerd2/bin/linkerd upgrade > linkerd.yml'
+      shell: '/home/{{ ansible_user }}/.linkerd2/bin/linkerd viz install --set jaegerUrl=jaeger.linkerd-jaeger:16686 > viz.yml'
     - shell: 'kubectl kustomize | kubectl apply -f -'
-    - shell: 'kubectl -n linkerd rollout restart deployment linkerd-grafana'
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
     KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"

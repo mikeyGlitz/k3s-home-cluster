@@ -3,28 +3,39 @@
   remote_user: manager
   become: yes
   tasks:
-    - name: Ensure Prerequisites
-      apt:
-        name:
-        - apt-transport-https
+    - name: Ensure Prerequisites - Alpine
+      apk:
+        name: "{{ item }}"
+        state: present
+      with_items:
         - ca-certificates
         - curl
-        - gnupg-agent
-        - software-properties-common
-        state: present
-    - name: Install Apt Key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-    - name: Add Apt Repository
-      apt_repository:
-        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
-        state: present
-        filename: docker-ce
-    - name: Install docker packages
-      apt:
-          name: # not required. A list of package names, like C(foo), or package specifier with version, like C(foo=1.0). Name wildcards (fnmatch) like C(apt*) and version wildcards like C(foo=1.0*) are also supported.
-            - docker-ce
-            - docker-ce-cli
-            - containerd.io
-          state: latest # not required. choices: absent;build-dep;latest;present. Indicates the desired package state. C(latest) ensures that the latest version is installed. C(build-dep) ensures the package build dependencies are installed.
-          update_cache: yes
+        - docker
+      when: ansible_distribution == 'Alpine'
+    - name: Ensure Prerequisites - Debian
+      block:
+        - apt:
+            name:
+            - apt-transport-https
+            - ca-certificates
+            - curl
+            - gnupg-agent
+            - software-properties-common
+            state: present
+        - name: Install Apt Key
+          apt_key:
+            url: https://download.docker.com/linux/ubuntu/gpg
+        - name: Add Apt Repository
+          apt_repository:
+            repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+            state: present
+            filename: docker-ce
+        - name: Install docker packages
+          apt:
+            name: # not required. A list of package names, like C(foo), or package specifier with version, like C(foo=1.0). Name wildcards (fnmatch) like C(apt*) and version wildcards like C(foo=1.0*) are also supported.
+              - docker-ce
+              - docker-ce-cli
+              - containerd.io
+            state: latest # not required. choices: absent;build-dep;latest;present. Indicates the desired package state. C(latest) ensures that the latest version is installed. C(build-dep) ensures the package build dependencies are installed.
+            update_cache: yes
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'

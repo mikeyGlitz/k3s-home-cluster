@@ -14,7 +14,7 @@ variable "encryption_key" {
 }
 
 resource "vault_generic_secret" "sec_proxy_creds" {
-  path = "secret/keycloak/monitoring-proxy/credential"
+  path = "secret/monitoring-proxy/credential"
   data_json = <<JSON
   {
       "client_id": "${ var.client_id }",

@@ -2,7 +2,10 @@
 - name: Create Project folder
   file: path=terraform/files state=directory
 - name: Copy files to project folder
-  copy: src=files.tf dest=terraform/files/files.tf
+  copy: "src={{ item }} dest=terraform/files/{{ item }}"
+  with_items:
+    - files.tf
+    - values.yaml.tpl
 - name: Prepare Terraform
   block:
     - name: Get vault IP
@@ -89,25 +92,6 @@
           app_user: "{{ files_user }}"
           app_password: "{{ files_password }}"
           redis_password: "{{ redis_password.stdout }}"
-    - pause: minutes=10
-    - shell: ls /mnt/external/ | grep -e '^files-files-pvc'
-      register: file_folder
-    - name: Update config with memcache settings
-      become: yes
-      blockinfile:
-          path: "/mnt/external/{{ file_folder.stdout_lines[0] }}/config/config.php" # required. The file to modify.,Before 2.3 this option was only usable as I(dest), I(destfile) and I(name).
-          insertbefore: '\);' # not required. choices: BOF;*regex*. If specified, the block will be inserted before the last match of specified regular expression. A special value is available; C(BOF) for inserting the block at the beginning of the file.  If specified regular expression has no matches, the block will be inserted at the end of the file.
-          state: present # not required. choices: absent;present. Whether the block should be there or not.
-          block: |
-            'oidc_login_proivder_url' => 'https://auth.{{ domain }}/auth/realms/hausnet',
-            'oidc_login_client_id' => 'files-portal',
-            'oidc_login_client_secret' => '{{ client_secret.stdout }}',
-            'oidc_login_button_text' => 'Home Network SSO',
-            'oidc_login_scope' => 'openid profile',
-            'mode' => 'userid',
-            'oidc_login_tls_verify' => true,
-    - name: Restart files deployment
-      shell: kubectl rollout restart -n files deployments/cloudfiles-nextcloud
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
     KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"

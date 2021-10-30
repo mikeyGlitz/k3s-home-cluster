@@ -40,7 +40,8 @@ resource "helm_release" "rel_keycloak" {
               rules:
                 - host: auth.haus.net
                   paths:
-                    - /
+                    - path: /
+                      pathType: Prefix
               tls:
                 - hosts:
                     - auth.haus.net
@@ -48,7 +49,7 @@ resource "helm_release" "rel_keycloak" {
             podAnnotations:
               vault.security.banzaicloud.io/vault-addr: https://vault.vault-system:8200
               vault.security.banzaicloud.io/vault-tls-secret: vault-cert-tls
-              vault.security.banzaicloud.io/vault-role: default
+              vault.security.banzaicloud.io/vault-role: identity
             extraEnv: |
               - name: PROXY_ADDRESS_FORWARDING
                 value: "true"
@@ -70,12 +71,26 @@ resource "helm_release" "rel_keycloak" {
 
     set {
       name = "serviceAccount.create"
-      value = "false"
+      value = "true"
+    }
+    set {
+      name = "serviceAccount.name"
+      value = "keycloak"
     }
 
     set {
         name = "postgresql.enabled"
         value = "true"
+    }
+
+    set {
+      name = "postgresql.serviceAccount.enabled"
+      value = "true"
+    }
+
+    set {
+      name = "postgresql.serviceAccount.name"
+      value = "keycloak"
     }
 
     set { 
@@ -99,15 +114,15 @@ resource "helm_release" "rel_keycloak" {
     }
 
     set {
-        name = "postgresql.master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
+        name = "postgresql.primary.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-addr"
         value = "https://vault.vault-system:8200"
     }
     set {
-        name = "postgresql.master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
+        name = "postgresql.primary.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-tls-secret"
         value = "vault-cert-tls"
     }
     set {
-        name = "postgresql.master.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
-        value = "default"
+        name = "postgresql.primary.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
+        value = "identity"
     }
 }

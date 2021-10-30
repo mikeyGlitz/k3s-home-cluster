@@ -6,8 +6,8 @@
       apiVersion: logging.banzaicloud.io/v1beta1
       kind: Logging
       metadata:
-        name: vault-logger
-        namespace: vault-system
+        name: keycloak-logger
+        namespace: keycloak
       spec:
         fluentd: {}
         fluentbit: {}

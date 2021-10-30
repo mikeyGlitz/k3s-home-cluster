@@ -1,7 +1,7 @@
-kind: ConfigMap
 apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: linkerd-grafana-config
+  name: grafana-config
 data:
   datasources.yaml: |-
     apiVersion: 1
@@ -10,7 +10,7 @@ data:
       type: prometheus
       access: proxy
       orgId: 1
-      url: http://linkerd-prometheus.linkerd.svc.cluster.local:9090
+      url: http://prometheus.linkerd-viz.svc.cluster.local:9090
       isDefault: false
       jsonData:
         timeInterval: "5s"

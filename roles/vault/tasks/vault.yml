@@ -5,7 +5,7 @@
   kubernetes.core.k8s:
     state: present
     definition:
-      apiVersion: cert-manager.io/v1alpha2
+      apiVersion: cert-manager.io/v1
       kind: Certificate
       metadata:
         name: vault-cert
@@ -222,9 +222,8 @@
         # Define a list of namespaces or use ["*"] for all namespaces.
         caNamespaces:
           - keycloak
-          - ldap
           - files
-          - linkerd
+          - linkerd-viz
           - openfaas
 
         # Describe where you would like to store the Vault unseal keys and root token.
@@ -269,11 +268,20 @@
               roles:
                 # Allow every pod in the default namespace to use the secret kv store
                 - name: default
-                  bound_service_account_names: ["default", "vault-secrets-webhook", "vault", "keycloak"]
-                  bound_service_account_namespaces: ["vault-system", "keycloak", "ldap", "linkerd", "openfaas", "files"]
+                  bound_service_account_names: ["default", "vault-secrets-webhook", "vault"]
+                  bound_service_account_namespaces: ["vault-system", "ldap", "linkerd-viz", "openfaas", "files"]
                   policies: ["allow_secrets", "allow_pki"]
                   ttl: 1h
-
+                - name: identity
+                  bound_service_account_names: ["keycloak"]
+                  bound_service_account_namespaces: ["keycloak"]
+                  policies: ["allow_secrets", "allow_pki"]
+                  ttl: 1h
+                - name: files
+                  bound_service_account_names: ["nextcloud"]
+                  bound_service_account_namespaces: ["files"]
+                  policies: ["allow_secrets", "allow_pki"]
+                  ttl: 1h
           secrets:
             - path: secret
               type: kv

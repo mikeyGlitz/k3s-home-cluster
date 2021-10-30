@@ -1,7 +1,11 @@
 ---
 - name: init_linkerd
-  shell: |
-    "/home/{{ ansible_user }}/.linkerd2/bin/linkerd install --identity-external-issuer=true | kubectl apply -f -" \
-    && "/home/{{ ansible_user }}/.linkerd2/bin/linkerd jaeger install | kubectl apply -f -"
+  listen: "Initialize Linkerd"
+  shell: "/home/{{ ansible_user }}/.linkerd2/bin/linkerd install --identity-external-issuer=true | kubectl apply -f -"
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+- name: init_tracing
+  listen: "Initialize Linkerd"
+  shell: "/home/{{ ansible_user }}/.linkerd2/bin/linkerd jaeger install | kubectl apply -f -"
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"

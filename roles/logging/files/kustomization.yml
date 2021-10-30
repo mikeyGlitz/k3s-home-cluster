@@ -1,4 +1,4 @@
 resources:
-- linkerd.yml
+- viz.yml
 patchesStrategicMerge:
 - grafana.yml

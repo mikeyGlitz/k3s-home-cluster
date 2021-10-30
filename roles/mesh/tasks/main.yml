@@ -36,10 +36,9 @@
         - crl sign
         - server auth
         - client auth
+  notify: "Initialize Linkerd"
   environment:
     KUBECONFIG: ~/kubeconfig
-  notify:
-    - init_linkerd
 - name: Flush handlers
   meta: flush_handlers
 - name: Wait for linkerd to initialize

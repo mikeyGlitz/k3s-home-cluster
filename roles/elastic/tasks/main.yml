@@ -1,11 +1,19 @@
 ---
-- name: Create project folder
-  file:
-    path: "/home/{{ ansible_user }}/terraform/elastic"
-    state: directory
-    mode: 0755
-- name: Deploy Elasticsearch
-  shell:
-    cmd: "/home/{{ansible_user}}/.linkerd2/bin/linkerd inject https://download.elastic.co/downloads/eck/{{ eck_version }}/all-in-one.yaml | kubectl apply -f -"
+- name: Create elastic release
+  block:
+    - kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: elastic-system
+            annotations:
+              linkerd.io/inject: enabled
+    - kubernetes.core.helm:
+        chart_repo_url: https://helm.elastic.co
+        chart_ref: eck-operator
+        release_name: elastic-operator
+        release_namespace: elastic-system
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"

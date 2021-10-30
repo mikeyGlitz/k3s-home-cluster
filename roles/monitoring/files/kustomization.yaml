@@ -1,4 +1,0 @@
-resources:
-  - viz.yaml
-patchesStrategicMerge:
-  - grafana.yml
