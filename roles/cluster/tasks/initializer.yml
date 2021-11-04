@@ -33,3 +33,43 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
     - fetch: src="/home/{{ ansible_user }}/kubeconfig" dest='/home/ansible/.kube/config' flat=yes
+    - name: Patch DNS rules
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          metadata:
+            name: coredns
+            namespace: kube-system
+          data:
+            Corefile: |
+              .:53 {
+                  errors
+                  health
+                  ready
+                  kubernetes cluster.local in-addr.arpa ip6.arpa {
+                    pods insecure
+                    fallthrough in-addr.arpa ip6.arpa
+                  }
+                  hosts /etc/coredns/NodeHosts {
+                    ttl 60
+                    reload 15s
+                    fallthrough
+                  }
+                  prometheus :9153
+                  forward . /etc/resolv.conf
+                  cache 30
+                  loop
+                  reload
+                  loadbalance
+              }
+              haus.net:53 {
+                  errors
+                  cache
+                  forward . 192.168.0.120
+              }
+      environment:
+        KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+    - name: Restart coredns
+      shell: kubectl -n kube-system rollout restart deployments/coredns
+      environment:
+        KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"

@@ -46,7 +46,17 @@
               access.token.claim: "true"
               claim.name: "groups"
               userinfo.token.claim: "true"
-              full.path: "true"
+              full.path: "false"
+          - name: ownCloudQuota
+            protocol: "openid-connect"
+            protocolMapper: "oidc-usermodel-property-mapper"
+            config:
+              userinfo.token.claim: "true"
+              user.attribute: "ownCloudQuota"
+              id.token.claim: "true"
+              access.token.claim: "true"
+              claim.name: "ownCloudQuota"
+              jsonType.label: "String"
         redirect_uris:
           - https://files.haus.net/*
         web_origins:

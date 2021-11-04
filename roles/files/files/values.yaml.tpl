@@ -14,15 +14,33 @@ nextcloud:
   username: vault:secret/data/nextcloud/app/credentials#app_user
   password: vault:secret/data/nextcloud/app/credentials#app_password
   configs:
-    oidc.config.pip: |
+    oidc.config.php: |
       <?php
+        # Configuration obtained from https://blog.lachlanlife.net/nextcloud-part-3-single-sign-on-with-keycloak/
         $CONFIG = array(
-          'oidc_provider_url' => 'https://auth.haus.net/auth/realms/hausnet',
+          'overwrite_cli_url' => 'https://files.haus.net',
+          'allow_user_to_change_display_name' => false,
+          'lost_password_link' => 'disabled',
+          'oidc_login_disable_registration' => false,
+          'oidc_login_provider_url' => 'https://auth.haus.net/auth/realms/hausnet',
           'oidc_login_client_id' => 'files-portal',
           'oidc_login_client_secret' => '${client_secret}',
+          'oidc_login_auto_redirect' => false,
+          'oidc_login_auto_redir_fallback' => true,
+          'odic_login_logout_url' => 'https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/logout?redirect_uri=https%3A%2F%files.haus.net%2F',
           'oidc_login_button_text' => 'Home Network SSO',
           'oidc_login_scope' => 'openid profile',
+          'oidc_login_default_quota' => '100000000000',
+          'oidc_login_attributes' => array(
+            'id' => 'preferred_username',
+            'mail' => 'email',
+            'name' => 'name',
+            'groups' => 'groups',
+            'quota' => 'ownCloudQuota'
+          ),
           'mode' => 'userid',
+          'oidc_create_groups' => true,
+          'overwriteprotocol' => 'https',
           'oidc_login_tls_verify' => false,
         );
 persistence:
