@@ -38,6 +38,15 @@
             name: files-portal-mapper
             protocol: openid-connect
             protocolMapper: oidc-audience-mapper
+          - name: files-group-mapper
+            protocol: "openid-connect"
+            protocolMapper: "oidc-group-membership-mapper"
+            config: 
+              id.token.claim: "true"
+              access.token.claim: "true"
+              claim.name: "groups"
+              userinfo.token.claim: "true"
+              full.path: "true"
         redirect_uris:
           - https://files.haus.net/*
         web_origins:
@@ -82,6 +91,7 @@
           app_user: "{{ files_user }}"
           app_password: "{{ files_password }}"
           redis_password: "{{ redis_password.stdout }}"
+          client_secret: "{{ client_secret.stdout }}"
     - name: Apply deployment
       terraform:
         project_path: "terraform/files" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.

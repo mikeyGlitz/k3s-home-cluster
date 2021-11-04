@@ -1,7 +1,7 @@
 ingress:
   enabled: true
   annotations:
-    kubernetes.io/ingress-class: nginx
+    kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: cluster-issuer
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: 2g
@@ -19,16 +19,16 @@ nextcloud:
         $CONFIG = array(
           'oidc_provider_url' => 'https://auth.haus.net/auth/realms/hausnet',
           'oidc_login_client_id' => 'files-portal',
-          'oidc_login_client_secret' => '{{ client_secret.stdout }}',
+          'oidc_login_client_secret' => '${client_secret}',
           'oidc_login_button_text' => 'Home Network SSO',
           'oidc_login_scope' => 'openid profile',
           'mode' => 'userid',
           'oidc_login_tls_verify' => false,
-        )
+        );
 persistence:
   enabled: yes
   storageClass: nfs-client
-  size: 2Ti
+  size: 2.5Ti
   accessMode: ReadWriteMany
 podAnnotations:
   vault.security.banzaicloud.io/vault-addr: https://vault.vault-system:8200
@@ -36,13 +36,19 @@ podAnnotations:
   vault.security.banzaicloud.io/vault-role: files
 internalDatabase:
   enabled: no
-mariadb:
+externalDatabase:
+  type: postgresql
+  host: cloudfiles-postgresql
+  database: nextcloud
+postgresql:
   enabled: yes
-  auth:
-    username: vault:secret/data/nextcloud/db/credentials#db_user
-    password: vault:secret/data/nextcloud/db/credentials#db_password
+  postgresqlDatabase: nextcloud
+  postgresqlUsername: vault:secret/data/nextcloud/db/credentials#db_user
+  postgresqlPassword: vault:secret/data/nextcloud/db/credentials#db_password
   serviceAccount:
+    enabled: yes
     name: nextcloud
+    autoMount: true
   primary:
     persistence:
       storageClass: nfs-client
@@ -59,7 +65,8 @@ rbac:
   serviceaccount:
     create: yes
     name: nextcloud
-livelinessProbe:
-  enabled: no
+livenessProbe:
+  enabled: yes
+  initialDelaySeconds: 600
 readinessProbe:
   enabled: no

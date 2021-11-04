@@ -24,6 +24,10 @@ variable "redis_password" {
   description = ""
 }
 
+variable "client_secret" {
+  type = string
+}
+
 resource "vault_generic_secret" "sec_db_creds" {
   path      = "secret/nextcloud/db/credentials"
   data_json = <<JSON
@@ -44,11 +48,28 @@ resource "vault_generic_secret" "sec_app_creds" {
     JSON
 }
 
+resource "kubernetes_secret" "sec_db_creds" {
+  metadata {
+    name      = "cloudfiles-db"
+    namespace = "files"
+    annotations = {
+      "vault.security.banzaicloud.io/vault-addr"        = "https://vault.vault-system:8200"
+      "vault.security.banzaicloud.io/vault-role"        = "default"
+      "vault.security.banzaicloud.io/vault-skip-verify" = "true"
+      "vault.security.banzaicloud.io/vault-path"        = "kubernetes"
+    }
+  }
+  data = {
+    "db-username" = "vault:secret/data/nextcloud/db/credentials#db_user"
+    "db-password" = "vault:secret/data/nextcloud/db/credentials#db_password"
+  }
+}
+
 resource "helm_release" "rel_files_cloud" {
   repository = "https://nextcloud.github.io/helm/"
   name       = "cloudfiles"
   chart      = "nextcloud"
   namespace  = "files"
 
-  values = [templatefile("./values.yaml", {redisPassword = var.redis_password})]
+  values = [templatefile("${path.module}/values.yaml.tpl", { redisPassword = var.redis_password, client_secret = var.client_secret })]
 }

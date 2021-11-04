@@ -20,7 +20,7 @@
             server: 192.168.0.120
             path: /mnt/external
             mountOptions:
-              - nfsvers=4
+              - nfsvers=3
               - async
               - noatime
   environment:
