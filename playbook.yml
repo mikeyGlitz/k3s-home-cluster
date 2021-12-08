@@ -36,12 +36,12 @@
       - identity
       - keycloak
       - iam
-  - name: files
-    tags:
-      - files
   - name: monitoring
     tags:
       - monitoring
+  - name: files
+    tags:
+      - files
   - name: functions
     tags:
       - function

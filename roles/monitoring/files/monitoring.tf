@@ -33,7 +33,7 @@ resource "kubernetes_config_map" "cm_auth_proxy_config" {
     "oauth2_proxy.cfg" = <<CFG
         provider = "keycloak"
         email_domains = ["*"]
-        scope = "oidc"
+        scope = "openid profile"
         login_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth"
         redeem_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token"
         validate_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo"
@@ -49,40 +49,20 @@ resource "helm_release" "rel_oauth2_proxy" {
   name       = "auth"
   namespace = "linkerd-viz"
 
-  set {
-    name  = "ingress.enabled"
-    value = "true"
-  }
-  set {
-    name  = "ingress.pathType"
-    value = "Prefix"
-  }
-  set {
-    name  = "ingress.hostname"
-    value = "monitoring.haus.net"
-  }
-
-  set {
-    name  = "ingress.path"
-    value = "/oauth2"
-  }
-
-  set {
-    name  = "ingress.annotations.kubernetes\\.io/class\\.name"
-    value = "nginx"
-  }
-  set {
-    name  = "ingress.annotations.cert-manager\\.io/cluster-issuer"
-    value = "cluster-issuer"
-  }
-  set {
-    name  = "ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/ssl-redirect"
-    value = "'true'"
-  }
-  set {
-    name  = "ingress.tls"
-    value = "true"
-  }
+  values = [
+    <<YAML
+      ingress:
+        enabled: true
+        pathType: Prefix
+        hostname: monitoring.haus.net
+        path: /oauth2
+        annotations:
+          kubernetes.io/ingress.class: nginx
+          nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+          cert-manager.io/cluster-issuer: 'cluster-issuer'
+        tls: true
+    YAML
+  ]
 
   set {
     name  = "configuration.clientID"

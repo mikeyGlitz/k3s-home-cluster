@@ -23,6 +23,7 @@ resource "helm_release" "rel_keycloak" {
     name = "keycloak"
     repository = "https://codecentric.github.io/helm-charts"
     chart = "keycloak"
+    timeout = 600
 
     depends_on = [
         vault_generic_secret.sec_keycloak_db,

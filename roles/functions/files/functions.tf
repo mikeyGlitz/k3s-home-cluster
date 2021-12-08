@@ -46,11 +46,11 @@ resource "kubernetes_config_map" "cm_auth_proxy_config" {
     "oauth2_proxy.cfg" = <<CFG
         provider = "keycloak"
         email_domains = ["*"]
-        scope = "oidc"
+        scope = "openid profile"
         login_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth"
         redeem_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token"
         validate_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo"
-        keycloak_groups = ["/admin"]
+        keycloak_groups = ["/admin", "/developers"]
         ssl_insecure_skip_verify = true
         skip_auth_routes = [
           "^/function",
@@ -66,40 +66,19 @@ resource "helm_release" "rel_oauth2_proxy" {
   name       = "auth"
   namespace  = "openfaas"
 
-  set {
-    name  = "ingress.enabled"
-    value = "true"
-  }
-  set {
-    name  = "ingress.pathType"
-    value = "Prefix"
-  }
-  set {
-    name  = "ingress.hostname"
-    value = "functions.haus.net"
-  }
-
-  set {
-    name  = "ingress.path"
-    value = "/oauth2"
-  }
-
-  set {
-    name  = "ingress.annotations.kubernetes\\.io/class\\.name"
-    value = "nginx"
-  }
-  set {
-    name  = "ingress.annotations.cert-manager\\.io/cluster-issuer"
-    value = "cluster-issuer"
-  }
-  set {
-    name  = "ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/ssl-redirect"
-    value = "'true'"
-  }
-  set {
-    name  = "ingress.tls"
-    value = "true"
-  }
+  values = [
+    <<YAML
+      ingress:
+        enabled: true
+        pathType: Prefix
+        path: /oauth2
+        tls: true
+        annotations:
+          kubernetes.io/ingress.class: nginx
+          nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+          cert-manager.io/cluster-issuer: cluster-issuer
+    YAML
+  ]
 
   set {
     name  = "configuration.clientID"

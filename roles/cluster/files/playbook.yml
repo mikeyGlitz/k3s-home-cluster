@@ -5,12 +5,12 @@
   tasks:
     - name: Ensure Prerequisites - Alpine
       apk:
-        name: "{{ item }}"
+        name:
+          - ca-certificates
+          - docker
+          - curl
+          - nfs-utils
         state: present
-      with_items:
-        - ca-certificates
-        - curl
-        - docker
       when: ansible_distribution == 'Alpine'
     - name: Ensure Prerequisites - Debian
       block:

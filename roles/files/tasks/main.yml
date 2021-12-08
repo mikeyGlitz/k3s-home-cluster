@@ -30,6 +30,8 @@
         client_authenticator_type: client-secret
         secret: "{{ client_secret.stdout }}"
         realm: hausnet
+        attributes:
+          id.token.signed.response.alg: "RS256"
         protocol_mappers:
           - config:
               included.client.audience: "files-portal"

@@ -58,7 +58,8 @@
         cmd: terraform init
         chdir: "terraform/monitoring"
       when: terraform_initialized.stat.exists != true
-    - shell: hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random
+    - shell: cat /proc/sys/kernel/random/uuid | sed 's/-//g'
+    # - shell: hexdump -n 16 -e '4/4 "%08X" 1 "\n"' /dev/random
       register: encryption_key
     - name: Plan deployment
       terraform:
