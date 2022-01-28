@@ -54,30 +54,27 @@ podAnnotations:
   vault.security.banzaicloud.io/vault-role: files
 internalDatabase:
   enabled: no
-externalDatabase:
-  type: postgresql
-  host: cloudfiles-postgresql
-  database: nextcloud
-postgresql:
-  enabled: yes
-  postgresqlDatabase: nextcloud
-  postgresqlUsername: vault:secret/data/nextcloud/db/credentials#db_user
-  postgresqlPassword: vault:secret/data/nextcloud/db/credentials#db_password
-  serviceAccount:
-    enabled: yes
-    name: nextcloud
-    autoMount: true
+mariadb:
+  enabled: true
+  auth:
+    database: nextcloud
+    username: vault:secret/data/nextcloud/db/credentials#db_user
+    password: vault:secret/data/nextcloud/db/credentials#db_password
+#  serviceAccount:
+#    name: nextcloud
+#    autoMountServiceToken: true
   primary:
-    persistence:
-      storageClass: nfs-client
     podAnnotations:
       vault.security.banzaicloud.io/vault-addr: https://vault.vault-system:8200
       vault.security.banzaicloud.io/vault-tls-secret: vault-cert-tls
       vault.security.banzaicloud.io/vault-role: files
+    persistence:
+      storageClass: nfs-client
 redis:
   enabled: yes
-  usePassword: yes
-  password: ${redisPassword}
+  auth:
+    password: ${redisPassword}
+  architecture: standalone
 rbac:
   enabled: yes
   serviceaccount:

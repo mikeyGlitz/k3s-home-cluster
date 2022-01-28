@@ -31,8 +31,8 @@
         realm: hausnet
         protocol_mappers:
           - config:
-              included.client.audience: "openfaas-portal"
-              id.token.claim: "false"
+              included.client.audience: "openfaas"
+              id.token.claim: "true"
               access.token.claim: "true"
             name: openfaas-portal-mapper
             protocol: openid-connect

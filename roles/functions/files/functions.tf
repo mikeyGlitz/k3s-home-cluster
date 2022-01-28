@@ -44,13 +44,12 @@ resource "kubernetes_config_map" "cm_auth_proxy_config" {
   }
   data = {
     "oauth2_proxy.cfg" = <<CFG
-        provider = "keycloak"
+        provider = "keycloak-oidc"
         email_domains = ["*"]
         scope = "openid profile"
-        login_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth"
-        redeem_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token"
-        validate_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo"
-        keycloak_groups = ["/admin", "/developers"]
+        redirect_url="https://functions.haus.net/oauth2/callback"
+        oidc_issuer_url = "https://auth.haus.net/auth/realms/hausnet"
+        allowed_roles = ["admin", "developer"]
         ssl_insecure_skip_verify = true
         skip_auth_routes = [
           "^/function",
@@ -72,6 +71,7 @@ resource "helm_release" "rel_oauth2_proxy" {
         enabled: true
         pathType: Prefix
         path: /oauth2
+        hostname: functions.haus.net
         tls: true
         annotations:
           kubernetes.io/ingress.class: nginx

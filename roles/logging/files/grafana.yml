@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-config
+  namespace: linkerd-viz
 data:
   datasources.yaml: |-
     apiVersion: 1

@@ -35,7 +35,7 @@
         protocol_mappers:
           - config:
               included.client.audience: "files-portal"
-              id.token.claim: "false"
+              id.token.claim: "true"
               access.token.claim: "true"
             name: files-portal-mapper
             protocol: openid-connect

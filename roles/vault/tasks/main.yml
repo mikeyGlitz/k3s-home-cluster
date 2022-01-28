@@ -39,4 +39,4 @@
   shell: "kubectl get secret -n vault-system vault-tls -o jsonpath=\"{.data.ca\\.crt}\" | base64 --decode > /home/{{ ansible_user }}/vault.crt"
 - name: Set up Vault
   become: yes
-  apk: name=vault state=present
+  apt: name=vault state=present

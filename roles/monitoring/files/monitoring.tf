@@ -31,13 +31,12 @@ resource "kubernetes_config_map" "cm_auth_proxy_config" {
   }
   data = {
     "oauth2_proxy.cfg" = <<CFG
-        provider = "keycloak"
+        provider = "keycloak-oidc"
         email_domains = ["*"]
         scope = "openid profile"
-        login_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/auth"
-        redeem_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/token"
-        validate_url = "https://auth.haus.net/auth/realms/hausnet/protocol/openid-connect/userinfo"
-        keycloak_groups = ["/admin"]
+        redirect_url = "https://monitoring.haus.net/oauth2/callback"
+        oidc_issuer_url = "https://auth.haus.net/auth/realms/hausnet"
+        allowed_roles = ["admin", "operator"]
         ssl_insecure_skip_verify = true
     CFG
   }

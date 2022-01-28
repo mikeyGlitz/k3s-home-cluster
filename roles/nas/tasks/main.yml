@@ -12,8 +12,10 @@
               linkerd.io/inject: enabled
     - kubernetes.core.helm:
         name: nfs-client
-        chart_ref: nfs-client-provisioner
-        chart_repo_url: https://ckotzbauer.github.io/helm-charts
+        # Deprecation notice - https://artifacthub.io/packages/helm/ckotzbauer/nfs-client-provisioner
+        # This change updates the repo and chart name to match
+        chart_ref: nfs-subdir-external-provisioner
+        chart_repo_url: https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
         release_namespace: nfs
         values:
           nfs:

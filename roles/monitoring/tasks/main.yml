@@ -28,7 +28,7 @@
           full.path: "true"
       - config:
           included.client.audience: "monitoring-proxy"
-          id.token.claim: "false"
+          id.token.claim: "true"
           access.token.claim: "true"
         name: monitoring-proxy-mapper
         protocol: openid-connect

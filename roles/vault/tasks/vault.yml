@@ -278,7 +278,7 @@
                   policies: ["allow_secrets", "allow_pki"]
                   ttl: 1h
                 - name: files
-                  bound_service_account_names: ["nextcloud"]
+                  bound_service_account_names: ["nextcloud", "cloudfiles-mariadb"]
                   bound_service_account_namespaces: ["files"]
                   policies: ["allow_secrets", "allow_pki"]
                   ttl: 1h

@@ -48,23 +48,6 @@ resource "vault_generic_secret" "sec_app_creds" {
     JSON
 }
 
-resource "kubernetes_secret" "sec_db_creds" {
-  metadata {
-    name      = "cloudfiles-db"
-    namespace = "files"
-    annotations = {
-      "vault.security.banzaicloud.io/vault-addr"        = "https://vault.vault-system:8200"
-      "vault.security.banzaicloud.io/vault-role"        = "default"
-      "vault.security.banzaicloud.io/vault-skip-verify" = "true"
-      "vault.security.banzaicloud.io/vault-path"        = "kubernetes"
-    }
-  }
-  data = {
-    "db-username" = "vault:secret/data/nextcloud/db/credentials#db_user"
-    "db-password" = "vault:secret/data/nextcloud/db/credentials#db_password"
-  }
-}
-
 resource "helm_release" "rel_files_cloud" {
   repository = "https://nextcloud.github.io/helm/"
   name       = "cloudfiles"
