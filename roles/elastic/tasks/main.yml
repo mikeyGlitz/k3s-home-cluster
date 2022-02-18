@@ -10,10 +10,31 @@
             name: elastic-system
             annotations:
               linkerd.io/inject: enabled
+    - kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: elastic-webhook
+            namespace: elastic-system
+          spec:
+            commonName: elastic-webhook.elastic-system.svc
+            dnsNames:
+            - elastic-operator-webhook.elastic-system.svc.cluster.local
+            - elastic-operator-webhook.elastic-system.svc
+            issuerRef:
+              kind: ClusterIssuer
+              name: cluster-issuer
+            secretName: elastic-operator-webhook-cert
     - kubernetes.core.helm:
         chart_repo_url: https://helm.elastic.co
         chart_ref: eck-operator
         release_name: elastic-operator
         release_namespace: elastic-system
+        values:
+          webhook:
+            manageCerts: false
+            certManagerCert: elastic-webhook
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"

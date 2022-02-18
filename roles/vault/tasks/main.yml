@@ -38,5 +38,5 @@
     KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"
   shell: "kubectl get secret -n vault-system vault-tls -o jsonpath=\"{.data.ca\\.crt}\" | base64 --decode > /home/{{ ansible_user }}/vault.crt"
 - name: Set up Vault
-  become: yes
   apt: name=vault state=present
+  become: yes
