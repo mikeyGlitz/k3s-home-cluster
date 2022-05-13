@@ -1,12 +1,3 @@
-resource "kubernetes_namespace" "ns_keycloak" {
-    metadata {
-        name = "keycloak"
-        annotations = {
-            "linkerd.io/inject" = "enabled"
-        }
-    }
-}
-
 resource "kubernetes_secret" "sec_realm" {
   metadata {
     name = "keycloak-hausnet-realm"
@@ -27,7 +18,8 @@ resource "helm_release" "rel_keycloak" {
 
     depends_on = [
         vault_generic_secret.sec_keycloak_db,
-        vault_generic_secret.sec_keycloak_app
+        vault_generic_secret.sec_keycloak_app,
+        kubernetes_secret.sec_realm,
     ]
 
     values = [
@@ -36,7 +28,7 @@ resource "helm_release" "rel_keycloak" {
               enabled: true
               annotations:
                 kubernetes.io/ingress.class: nginx
-                cert-manager.io/cluster-issuer: cluster-issuer
+                cert-manager.io/issuer: keycloak-issuer
                 nginx.ingress.kubernetes.io/ssl-redirect: 'true'
               rules:
                 - host: auth.haus.net

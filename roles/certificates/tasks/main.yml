@@ -46,5 +46,23 @@
           spec:
             ca:
               secretName: ca-key-pair
+    - kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: trust.cert-manager.io/v1alpha1
+          kind: Bundle
+          metadata:
+            name: ca-bundle
+          spec:
+            sources:
+            # A Secret in the trust namespace created via a cert-manager Certificate
+            - secret:
+                name: "ca-key-pair"
+                key: "tls.crt"
+            target:
+              # Data synced to the ConfigMap `my-org.com` at the key `root-certs.pem` in
+              # every namespace.
+              configMap:
+                key: "ca.crt"
   environment:
     KUBECONFIG: /home/{{ ansible_user }}/kubeconfig

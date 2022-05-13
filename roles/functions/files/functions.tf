@@ -15,13 +15,13 @@ variable "encryption_key" {
 }
 
 variable "openfaas_user" {
-  type = string
+  type        = string
   description = "Openfaas console username"
-  default = "openfaas"
+  default     = "openfaas"
 }
 
 variable "openfaas_password" {
-  type = string
+  type        = string
   description = "OpenFaas Basic Auth password"
 }
 
@@ -39,7 +39,7 @@ resource "vault_generic_secret" "sec_proxy_creds" {
 
 resource "kubernetes_config_map" "cm_auth_proxy_config" {
   metadata {
-    name = "oauth2-proxy-config"
+    name      = "oauth2-proxy-config"
     namespace = "openfaas"
   }
   data = {
@@ -49,12 +49,12 @@ resource "kubernetes_config_map" "cm_auth_proxy_config" {
         scope = "openid profile"
         redirect_url="https://functions.haus.net/oauth2/callback"
         oidc_issuer_url = "https://auth.haus.net/auth/realms/hausnet"
-        allowed_roles = ["admin", "developer"]
-        ssl_insecure_skip_verify = true
+        allowed_groups = ["admin", "developer"]
         skip_auth_routes = [
           "^/function",
           "^/system"
         ]
+        provider_ca_files = ["/etc/tls/certs/ca.crt"]
     CFG
   }
 }
@@ -76,7 +76,14 @@ resource "helm_release" "rel_oauth2_proxy" {
         annotations:
           kubernetes.io/ingress.class: nginx
           nginx.ingress.kubernetes.io/ssl-redirect: 'true'
-          cert-manager.io/cluster-issuer: cluster-issuer
+          cert-manager.io/issuer: functions-issuer
+      extraVolumes:
+        - name: root-ca-bundle
+          configMap:
+            name: ca-bundle
+      extraVolumeMounts:
+        - name: root-ca-bundle
+          mountPath: /etc/tls/certs
     YAML
   ]
 
@@ -120,17 +127,17 @@ resource "helm_release" "rel_oauth2_proxy" {
 
 resource "kubernetes_secret" "sec_basic_auth" {
   metadata {
-    name = "basic-auth"
+    name      = "basic-auth"
     namespace = "openfaas"
     annotations = {
-      "vault.security.banzaicloud.io/vault-addr" = "https://vault.vault-system:8200"
-      "vault.security.banzaicloud.io/vault-role" = "default"
+      "vault.security.banzaicloud.io/vault-addr"        = "https://vault.vault-system.svc.cluster.local:8200"
+      "vault.security.banzaicloud.io/vault-role"        = "default" # In case of Secrets the webhook's ServiceAccount is used
       "vault.security.banzaicloud.io/vault-skip-verify" = "true"
-      "vault.security.banzaicloud.io/vault-path" = "kubernetes"
+      "vault.security.banzaicloud.io/vault-path"        = "kubernetes"
     }
   }
   data = {
-    "basic-auth-user" = var.openfaas_user
+    "basic-auth-user"     = var.openfaas_user
     "basic-auth-password" = "vault:secret/data/openfaas/credential#openfaas_password"
   }
 }
@@ -174,17 +181,17 @@ resource "helm_release" "rel_cron_connector" {
   repository = "https://openfaas.github.io/faas-netes/"
 }
 
-resource "helm_release" "rel_openfaas_loki" {
-  name       = "loki"
-  namespace  = "openfaas"
-  repository = "https://lucasroesler.com/openfaas-loki"
-  chart      = "openfaas-loki"
-  set {
-    name  = "lokiURL"
-    value = "http://loki.logging:3100"
-  }
-  set {
-    name  = "logLevel"
-    value = "DEBUG"
-  }
-}
+# resource "helm_release" "rel_openfaas_loki" {
+#   name       = "loki"
+#   namespace  = "openfaas"
+#   repository = "https://lucasroesler.com/openfaas-loki"
+#   chart      = "openfaas-loki"
+#   set {
+#     name  = "lokiURL"
+#     value = "http://loki.logging:3100"
+#   }
+#   set {
+#     name  = "logLevel"
+#     value = "DEBUG"
+#   }
+# }

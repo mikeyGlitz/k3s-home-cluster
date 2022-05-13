@@ -80,6 +80,37 @@
             name: files
             annotations:
               linkerd.io/inject: enabled
+    - name: Create CA cert
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: files-root-ca
+            namespace: files
+          spec:
+            isCA: true
+            commonName: hausnet-ca
+            secretName: files-ca
+            privateKey: 
+              algorithm: ECDSA
+              size: 256
+            issuerRef:
+              name: cluster-issuer
+              kind: ClusterIssuer
+    - name: Create keycloak issuer
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Issuer
+          metadata:
+            name: files-issuer
+            namespace: files
+          spec:
+            ca:
+              secretName: files-ca
     - name: Create monitoring
       include: monitoring.yml
     - name: Copy terraform config

@@ -19,12 +19,12 @@
 		"michelemelluso.gitignore",
 		"eamodio.gitlens",
 		"redhat.vscode-yaml",
-		// "vscoss.vscode-ansible",
-		"zbr.vscode-ansible",
+		"redhat.ansible",
 		"hashicorp.terraform",
+		"adamhartford.vscode-base64",
 		"ms-kubernetes-tools.vscode-kubernetes-tools"
 	],
-	"mounts": ["source=${localEnv:HOME}${localEnv:USERPROFILE}\\.kube,type=bind,target=/home/vscode/.kube,consistency=cached"],
+	"mounts": ["source=${localEnv:HOME}${localEnv:USERPROFILE}/.kube,type=bind,target=/home/vscode/.kube,consistency=cached"],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],

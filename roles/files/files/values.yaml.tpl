@@ -2,7 +2,7 @@ ingress:
   enabled: true
   annotations:
     kubernetes.io/ingress.class: nginx
-    cert-manager.io/cluster-issuer: cluster-issuer
+    cert-manager.io/issuer: files-issuer
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: 2g
   tls:
@@ -60,9 +60,10 @@ mariadb:
     database: nextcloud
     username: vault:secret/data/nextcloud/db/credentials#db_user
     password: vault:secret/data/nextcloud/db/credentials#db_password
-#  serviceAccount:
-#    name: nextcloud
-#    autoMountServiceToken: true
+  serviceAccount:
+    create: false
+    name: nextcloud
+    autoMountServiceToken: true
   primary:
     podAnnotations:
       vault.security.banzaicloud.io/vault-addr: https://vault.vault-system:8200

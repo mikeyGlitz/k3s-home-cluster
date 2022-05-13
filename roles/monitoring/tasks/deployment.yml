@@ -12,7 +12,7 @@
             namespace: linkerd-viz
             annotations:
               kubernetes.io/ingress.class: nginx
-              cert-manager.io/cluster-issuer: cluster-issuer
+              cert-manager.io/issuer: monitoring-issuer
               nginx.ingress.kubernetes.io/upstream-vhost: $service_name.$namespace.svc.cluster.local:8084
               nginx.ingress.kubernetes.io/configuration-snippet: |
                 proxy_set_header Origin "";

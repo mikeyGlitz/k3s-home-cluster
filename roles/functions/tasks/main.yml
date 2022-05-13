@@ -66,6 +66,37 @@
             name: openfaas-fn
             annotations:
               linkerd.io/inject: enabled
+    - name: Create CA cert
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: functions-root-ca
+            namespace: openfaas
+          spec:
+            isCA: true
+            commonName: hausnet-ca
+            secretName: functions-ca
+            privateKey: 
+              algorithm: ECDSA
+              size: 256
+            issuerRef:
+              name: cluster-issuer
+              kind: ClusterIssuer
+    - name: Create keycloak issuer
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Issuer
+          metadata:
+            name: functions-issuer
+            namespace: openfaas
+          spec:
+            ca:
+              secretName: functions-ca
     - file: path=terraform/functions state=directory
     - name: Copy terraform config
       template:

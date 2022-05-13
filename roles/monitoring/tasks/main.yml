@@ -40,6 +40,37 @@
     validate_certs: no
 - name: Deploy proxy resources
   block:
+    - name: Create CA cert
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: monitoring-ca
+            namespace: linkerd-viz
+          spec:
+            isCA: true
+            commonName: hausnet-ca
+            secretName: monitoring-ca
+            privateKey: 
+              algorithm: ECDSA
+              size: 256
+            issuerRef:
+              name: cluster-issuer
+              kind: ClusterIssuer
+    - name: Create monitoring issuer
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Issuer
+          metadata:
+            name: monitoring-issuer
+            namespace: linkerd-viz
+          spec:
+            ca:
+              secretName: monitoring-ca
     - file: path="terraform/monitoring" state="directory"
     - name: Get vault IP
       shell: "kubectl get svc vault -n vault-system -o jsonpath=\"{.spec.clusterIP}\""

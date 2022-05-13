@@ -36,8 +36,8 @@ resource "kubernetes_config_map" "cm_auth_proxy_config" {
         scope = "openid profile"
         redirect_url = "https://monitoring.haus.net/oauth2/callback"
         oidc_issuer_url = "https://auth.haus.net/auth/realms/hausnet"
-        allowed_roles = ["admin", "operator"]
-        ssl_insecure_skip_verify = true
+        allowed_groups = ["admin", "operations"]
+        provider_ca_files = ["/etc/tls/certs/ca.crt"]
     CFG
   }
 }
@@ -60,6 +60,13 @@ resource "helm_release" "rel_oauth2_proxy" {
           nginx.ingress.kubernetes.io/ssl-redirect: 'true'
           cert-manager.io/cluster-issuer: 'cluster-issuer'
         tls: true
+      extraVolumes:
+        - name: root-ca-bundle
+          configMap:
+            name: ca-bundle
+      extraVolumeMounts:
+        - name: root-ca-bundle
+          mountPath: /etc/tls/certs
     YAML
   ]
 
