@@ -1,0 +1,78 @@
+---
+- name: Deploy Gitlab runner
+  environment:
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+  block:
+    - name: Create namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: gitlab
+            annotations:
+              linkerd.io/inject: enabled
+    - name: Deploy runner chart
+      kubernetes.core.helm:
+        chart_ref: gitlab-runner
+        name: runner
+        chart_repo_url: https://charts.gitlab.io
+        release_namespace: gitlab
+        release_values:
+          gitlabUrl: https://gitlab.com
+          runnerRegistrationToken: "{{ gitlab_token }}"
+          concurrent: 4
+          runners:
+            privileged: "true"
+          rbac:
+            create: "true"
+    - name: Create Logging resource
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: logging.banzaicloud.io/v1beta1
+          kind: Logging
+          metadata:
+            name: runner-logger
+            namespace: gitlab
+          spec:
+            fluentd: {}
+            fluentbit: {}
+            controlNamespace: logging
+    - name: Create Flow resource
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: logging.banzaicloud.io/v1beta1
+          kind: Flow
+          metadata:
+            name: runner-flow
+            namespace: gitlab
+          spec:
+            globalOutputRefs:
+            - logging-index-output
+            filters:
+              - tag_normaliser: {}
+              - parser:
+                  remove_key_name_field: true
+                  reserve_data: true
+                  parse:
+                    type: multi_format
+                    patterns:
+                      - format: regexp
+                        expression: '/^(?<time>[^\]]*) \[(?<level>[^ ]*)\] (?<source>[^\":]*): (?<message>.*)$/'
+                        time_key: logtime
+                        time_format: '%Y-%m-%dT%H:%M:%S.%LZ'
+                      - format: regexp
+                        expression: '/^time="(?<time>[^\]]*)" level=(?<level>[^ ]*) msg="(?<message>[^\"]*)"/'
+                        time_key: time
+                        time_format: '%Y-%m-%dT%H:%M:%SZ'
+                      - format: regexp
+                        expression: '/^level=(?<level>[^ ]*) ts=(?<time>[^\]]*) caller=(?<source>.*) msg="(?<message>[^\"]*)"/'
+                        time_key: time
+                        time_format: '%Y-%m-%dT%H:%M:%S.%LZ'
+            match:
+            - select:
+                labels:
+                  release: runner

@@ -180,18 +180,3 @@ resource "helm_release" "rel_cron_connector" {
   chart = "cron-connector"
   repository = "https://openfaas.github.io/faas-netes/"
 }
-
-# resource "helm_release" "rel_openfaas_loki" {
-#   name       = "loki"
-#   namespace  = "openfaas"
-#   repository = "https://lucasroesler.com/openfaas-loki"
-#   chart      = "openfaas-loki"
-#   set {
-#     name  = "lokiURL"
-#     value = "http://loki.logging:3100"
-#   }
-#   set {
-#     name  = "logLevel"
-#     value = "DEBUG"
-#   }
-# }

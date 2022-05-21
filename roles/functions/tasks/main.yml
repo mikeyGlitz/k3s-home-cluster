@@ -125,6 +125,18 @@
         project_path: "terraform/functions" # required. The path to the root of the Terraform directory with the vars.tf/main.tf/etc to use.
         state: present # not required. choices: planned;present;absent. Goal state of given stage/project
         plan_file: plan.out
+    - name: Clone Loki adapter repo
+      git:
+        repo: https://github.com/LucasRoesler/openfaas-loki
+        dest: /tmp/openfaas-loki
+    - name: Deploy Loki Adapter
+      kubernetes.core.helm:
+        name: loki
+        chart_ref: /tmp/openfaas-loki/charts/openfaas-loki
+        release_namespace: openfaas
+        release_values:
+          lokiURL: http://loki.logging:3100
+          logLevel: DEBUG
     - shell: kubectl -n openfaas get deploy gateway -o yaml | .linkerd2/bin/linkerd inject --skip-outbound-ports=4222 - | kubectl apply -f -
     - shell: kubectl -n openfaas set env deployment/gateway -c gateway -e logs_provider_url=http://loki-openfaas-loki.openfaas:9191/
     - name: Deploy ingress

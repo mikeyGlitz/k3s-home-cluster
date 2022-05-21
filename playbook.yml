@@ -47,3 +47,8 @@
       - function
       - functions
       - openfaas
+  - name: gitlab
+    tags:
+      - gitlab
+      - runner
+      - ci
