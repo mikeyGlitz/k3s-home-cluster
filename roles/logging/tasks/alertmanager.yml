@@ -1,0 +1,110 @@
+---
+- name: Deploy Namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      kind: Namespace
+      apiVersion: v1
+      metadata:
+        name: linkerd-viz
+        annotations:
+          linkerd.io/inject: enabled
+  environment: &env
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+- name: Deploy certificate resources
+  environment: 
+    <<: *env
+  block:
+    - name: Create CA cert
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: monitoring-root-ca
+            namespace: linkerd-viz
+          spec:
+            isCA: true
+            commonName: hausnet-ca
+            secretName: monitoring-ca
+            privateKey: 
+              algorithm: ECDSA
+              size: 256
+            issuerRef:
+              name: cluster-issuer
+              kind: ClusterIssuer
+    - name: Create Certificate issuer
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Issuer
+          metadata:
+            name: monitoring-issuer
+            namespace: linkerd-viz
+          spec:
+            ca:
+              secretName: monitoring-ca
+- name: Deploy Helm release
+  kubernetes.core.helm:
+    wait: true
+    chart_ref: kube-prometheus-stack
+    name: metrics
+    chart_repo_url: https://prometheus-community.github.io/helm-charts
+    release_namespace: linkerd-viz
+    release_values:
+      grafana:
+        enabled: false
+      alertmanager:
+        enabled: true
+        alertmanagerSpec:
+          externalUrl: https://monitoring.haus.net/alarms
+          logFormat: json
+          alertmanagerConfiguration:
+            name: global-config
+      prometheus:
+        prometheusSpec:
+          evaluationInterval: 10s
+          scrapeInterval: 10s
+          scrapeTimeout: 10s
+          resources:
+            requests:
+              memory: 4Gi
+          additionalScrapeConfigs: "{{ lookup('file', 'scrapers.yml') | from_yaml }}"
+      prometheusOperator:
+        admissionWebhooks:
+          patch:
+            podAnnotations:
+              linkerd.io/inject: disabled
+          certManager:
+            enabled: "true"
+            issuerRef:
+              name: monitoring-issuer
+              kind: Issuer
+  environment:
+    <<: *env
+- name: Deploy Alertmanager Config
+  environment:
+    <<: *env
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      kind: AlertmanagerConfig
+      apiVersion: monitoring.coreos.com/v1alpha1
+      metadata:
+        name: global-config
+        namespace: linkerd-viz
+      spec:
+        route:
+          groupBy: ['alertName']
+          groupWait: 10s
+          groupInterval: 10s
+          repeatInterval: 12h
+          receiver: email
+          matchers:
+            - name: severity
+              value: critical
+        receivers:
+          - name: email
+            emailConfigs: "{{ lookup('template', 'emailConfigs.yml.j2') | from_yaml }}"

@@ -24,6 +24,11 @@
   - name: elastic
     tags:
       - elastic
+  - name: mail
+    tags:
+      - mail
+      - reflector
+      - smtp
   - name: logging
     tags:
       - logs

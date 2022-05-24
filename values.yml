@@ -1,0 +1,13 @@
+certs:
+  create: true
+config:
+  general:
+    ALLOWED_SENDER_DOMAINS: 'cluster.local haus.net'
+    MASQUERADED_DOMAINS: haus.net
+    RELAYHOST: '[relay.dynu.com]:2525'
+secret:
+  RELAYHOST_USERNAME: relay@relay.haus.net
+  RELAYHOST_PASSWORD: 'inetP@$$w0rd!'
+persistence:
+  enabled: true
+  storageClass: nfs-client

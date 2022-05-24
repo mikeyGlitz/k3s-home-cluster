@@ -22,6 +22,7 @@
 		"redhat.ansible",
 		"hashicorp.terraform",
 		"adamhartford.vscode-base64",
+		"samuelcolvin.jinjahtml",
 		"ms-kubernetes-tools.vscode-kubernetes-tools"
 	],
 	"mounts": ["source=${localEnv:HOME}${localEnv:USERPROFILE}/.kube,type=bind,target=/home/vscode/.kube,consistency=cached"],

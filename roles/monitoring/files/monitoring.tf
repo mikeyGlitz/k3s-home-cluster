@@ -103,6 +103,11 @@ resource "helm_release" "rel_oauth2_proxy" {
   }
 
   set {
+    name  = "podAnnotations.linkerd\\.io/inject"
+    value = "enabled"
+  }
+
+  set {
     name  = "serviceAccount.create"
     value = "false"
   }

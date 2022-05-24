@@ -1,0 +1,68 @@
+---
+- name: Deploy namespace
+  environment: &env
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: mail-sender
+        annotations:
+          linkerd.io/inject: enabled
+- name: Deploy certificate resources
+  environment: 
+    <<: *env
+  block:
+    - name: Create CA cert
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: mail-root-ca
+            namespace: mail-sender
+          spec:
+            isCA: true
+            commonName: hausnet-ca
+            secretName: mail-ca
+            privateKey: 
+              algorithm: RSA
+              size: 2048
+            issuerRef:
+              name: cluster-issuer
+              kind: ClusterIssuer
+    - name: Create Certificate issuer
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Issuer
+          metadata:
+            name: mail-issuer
+            namespace: mail-sender
+          spec:
+            ca:
+              secretName: mail-ca
+- name: Deploy Mailer Helm
+  environment:
+    <<: *env
+  kubernetes.core.helm:
+    chart_ref: mail
+    chart_repo_url: https://bokysan.github.io/docker-postfix/
+    name: sender
+    release_namespace: mail-sender
+    release_values:
+      certs:
+        create: true
+      config:
+        general:
+          TZ: America/New_York
+          LOG_FORMAT: json
+          RELAYHOST: "{{ relay_host }}"
+          ALLOWED_SENDER_DOMAINS: cluster.local haus.net
+      secret:
+        RELAYHOST_USERNAME: "{{ relay_username }}"
+        RELAYHOST_PASSWORD: "{{ relay_password }}"

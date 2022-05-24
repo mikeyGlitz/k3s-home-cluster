@@ -6,6 +6,8 @@
     mode: 0755
 - name: Deploy logging apparatus
   block:
+    - name: Deploy alertManager
+      import_tasks: alertmanager.yml
     - copy: src="{{ item }}" dest="/home/{{ ansible_user }}/terraform/logging/{{ item }}"
       with_items:
       - logging.tf
@@ -51,9 +53,10 @@
       copy: src="{{ item }}" dest="{{ item }}"
       with_items:
       - grafana.yml
+      - viz.values.yaml
       - kustomization.yml
     - name: Deploy grafana updates
-      shell: '/home/{{ ansible_user }}/.linkerd2/bin/linkerd viz install --set jaegerUrl=jaeger.linkerd-jaeger:16686 > viz.yml'
+      shell: '/home/{{ ansible_user }}/.linkerd2/bin/linkerd viz install --values viz.values.yaml > viz.yml'
     - shell: 'kubectl kustomize | kubectl apply -f -'
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"

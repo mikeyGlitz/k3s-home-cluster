@@ -1,0 +1,8 @@
+---
+{% for email in alarm_emails %}
+- to: {{ email }}
+  from: alertmanager@haus.net
+  smarthost: sender-mail.mail-sender:587 
+  tlsConfig:
+    insecureSkipVerify: true
+{% endfor %}
