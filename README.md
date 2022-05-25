@@ -60,6 +60,7 @@ The full variables list is detailed below:
 | plex_token          | ""        | Plex claim token for new plex server  |
 | files_user          | manager   | Default Admin user for Owncloud       |
 | files_password      | p@$$w0rd! | Default Admin password for Owncloud   |
+| openfaas_password   | p@$$w0rd! | Default password for OpenFaaS         |
 
 # References
 
