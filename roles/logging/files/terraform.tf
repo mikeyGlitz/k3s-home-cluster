@@ -1,4 +1,0 @@
-provider  "kubernetes" {}
-
-
-provider "helm" {}

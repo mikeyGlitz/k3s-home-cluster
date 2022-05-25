@@ -1,19 +1,7 @@
 ---
-- name: Deploy Namespace
-  kubernetes.core.k8s:
-    state: present
-    definition:
-      kind: Namespace
-      apiVersion: v1
-      metadata:
-        name: linkerd-viz
-        annotations:
-          linkerd.io/inject: enabled
+- name: Deploy certificate resources
   environment: &env
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
-- name: Deploy certificate resources
-  environment: 
-    <<: *env
   block:
     - name: Create CA cert
       kubernetes.core.k8s:
@@ -23,7 +11,7 @@
           kind: Certificate
           metadata:
             name: monitoring-root-ca
-            namespace: linkerd-viz
+            namespace: monitoring
           spec:
             isCA: true
             commonName: hausnet-ca
@@ -42,7 +30,7 @@
           kind: Issuer
           metadata:
             name: monitoring-issuer
-            namespace: linkerd-viz
+            namespace: monitoring
           spec:
             ca:
               secretName: monitoring-ca
@@ -52,12 +40,147 @@
     chart_ref: kube-prometheus-stack
     name: metrics
     chart_repo_url: https://prometheus-community.github.io/helm-charts
-    release_namespace: linkerd-viz
+    release_namespace: monitoring
     release_values:
       grafana:
-        enabled: false
+        # Grafana configuration to make Linkerd work
+        # https://raw.githubusercontent.com/linkerd/linkerd2/main/grafana/values.yaml
+        # Documentation is located at - https://linkerd.io/2.11/tasks/grafana/
+        # For bringing your own grafana instance
+        grafana.ini:
+          server:
+            root_url: '%(protocol)s://%(domain)s:/grafana/'
+          auth:
+            disable_login_form: true
+          auth.anonymous:
+            enabled: true
+            org_role: Editor
+          auth.basic:
+            enabled: false
+          analytics:
+            check_for_updates: false
+          panels:
+            disable_sanitize_html: true
+          log:
+            mode: console
+          log.console:
+            format: text
+            level: info
+          plugins:
+            enable_alpha: true
+          smtp:
+            enabled: true
+            from_address: grafana@haus.net
+            host: sender-mail.mail-sender:587
+            skip_verify: true
+        dashboardProviders:
+          dashboardproviders.yaml:
+            apiVersion: 1
+            providers:
+            - name: 'default'
+              orgId: 1
+              folder: ''
+              type: file
+              disableDeletion: false
+              editable: true
+              options:
+                path: /var/lib/grafana/dashboards/default
+
+        dashboards:
+          default:
+            # all these charts are hosted at https://grafana.com/grafana/dashboards/{id}
+            top-line:
+              gnetId: 15474
+              revision: 3
+              datasource: prometheus
+            health:
+              gnetId: 15486
+              revision: 2
+              datasource: prometheus
+            kubernetes:
+              gnetId: 15479
+              revision: 2
+              datasource: prometheus
+            namespace:
+              gnetId: 15478
+              revision: 2
+              datasource: prometheus
+            deployment:
+              gnetId: 15475
+              revision: 5
+              datasource: prometheus
+            pod:
+              gnetId: 15477
+              revision: 2
+              datasource: prometheus
+            service:
+              gnetId: 15480
+              revision: 2
+              datasource: prometheus
+            route:
+              gnetId: 15481
+              revision: 2
+              datasource: prometheus
+            authority:
+              gnetId: 15482
+              revision: 2
+              datasource: prometheus
+            cronjob:
+              gnetId: 15483
+              revision: 2
+              datasource: prometheus
+            job:
+              gnetId: 15487
+              revision: 2
+              datasource: prometheus
+            daemonset:
+              gnetId: 15484
+              revision: 2
+              datasource: prometheus
+            replicaset:
+              gnetId: 15491
+              revision: 2
+              datasource: prometheus
+            statefulset:
+              gnetId: 15493
+              revision: 2
+              datasource: prometheus
+            replicationcontroller:
+              gnetId: 15492
+              revision: 2
+              datasource: prometheus
+            prometheus:
+              gnetId: 15489
+              revision: 2
+              datasource: prometheus
+            prometheus-benchmark:
+              gnetId: 15490
+              revision: 2
+              datasource: prometheus
+            multicluster:
+              gnetId: 15488
+              revision: 2
+              datasource: prometheus
+        additionalDataSources:
+          - name: alertmanager
+            type: alertmanager
+            url: http://metrics-kube-prometheus-st-alertmanager:9093
+            access: proxy
+            orgId: 1
+            jsonData:
+              implementation: prometheus
+          - name: loki   
+            type: loki
+            access: proxy
+            default: false
+            editable: true
+            url: http://loki:3100
+            maximumLines: "300"
+            orgId: 1
+            jsonData:
+              manageAlerts: true
+              alertmanagerUid: alertmanager
       alertmanager:
-        enabled: true
         alertmanagerSpec:
           externalUrl: https://monitoring.haus.net/alarms
           logFormat: json
@@ -94,7 +217,7 @@
       apiVersion: monitoring.coreos.com/v1alpha1
       metadata:
         name: global-config
-        namespace: linkerd-viz
+        namespace: monitoring
       spec:
         route:
           groupBy: ['alertName']
@@ -102,9 +225,9 @@
           groupInterval: 10s
           repeatInterval: 12h
           receiver: email
-          matchers:
-            - name: severity
-              value: critical
+          # matchers:
+          #   - name: severity
+          #     value: critical
         receivers:
           - name: email
             emailConfigs: "{{ lookup('template', 'emailConfigs.yml.j2') | from_yaml }}"

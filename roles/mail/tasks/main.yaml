@@ -46,6 +46,27 @@
           spec:
             ca:
               secretName: mail-ca
+    - name: Create Mail Certificate
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: mail-cert
+            namespace: mail-sender
+          spec:
+            secretName: mail-tls
+            commonName: mail.haus.net
+            privateKey:
+              algorithm: RSA
+              size: 2048
+            usages:
+              - server auth
+              - client auth
+            issuerRef:
+              name: mail-issuer
+              kind: Issuer
 - name: Deploy Mailer Helm
   environment:
     <<: *env
@@ -55,8 +76,17 @@
     name: sender
     release_namespace: mail-sender
     release_values:
-      certs:
-        create: true
+      image:
+        repository: mikeyglitz/postfix
+        tag: latest
+      extraVolumes:
+        - name: tls-cert
+          secret:
+            secretName: mail-tls
+      extraVolumeMounts:
+        - name: tls-cert
+          mountPath: /mnt/certs
+          readOnly: true
       config:
         general:
           TZ: America/New_York

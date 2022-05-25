@@ -3,6 +3,7 @@
 - to: {{ email }}
   from: alertmanager@haus.net
   smarthost: sender-mail.mail-sender:587 
+  requireTLS: true
   tlsConfig:
     insecureSkipVerify: true
 {% endfor %}

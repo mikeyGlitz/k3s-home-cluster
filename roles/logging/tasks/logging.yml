@@ -1,0 +1,28 @@
+---
+- name: Deploy logging operator
+  environment: &env
+    KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
+  kubernetes.core.helm:
+    wait: true
+    chart_ref: logging-operator
+    name: logging-operator
+    chart_repo_url: https://kubernetes-charts.banzaicloud.com
+    release_namespace: logging
+    create_namespace: true
+- name: Deploy Loki
+  kubernetes.core.helm:
+    wait: true
+    chart_ref: loki-stack
+    name: loki
+    chart_repo_url: https://grafana.github.io/helm-charts
+    release_namespace: monitoring
+    release_values:
+      pomtail:
+        enabled: true
+      loki:
+        enabled: true
+      grafana:
+        enabled: false
+        sidecar:
+          datasources:
+            enabled: false

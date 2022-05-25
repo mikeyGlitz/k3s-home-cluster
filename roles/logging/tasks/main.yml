@@ -6,32 +6,20 @@
     mode: 0755
 - name: Deploy logging apparatus
   block:
+    - name: Deploy namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: monitoring
+            annotations:
+              linkerd.io/inject: enabled
     - name: Deploy alertManager
       import_tasks: alertmanager.yml
-    - copy: src="{{ item }}" dest="/home/{{ ansible_user }}/terraform/logging/{{ item }}"
-      with_items:
-      - logging.tf
-      - terraform.tf
-    - stat:
-        path: "terraform/logging/.terraform"
-      register: terraform_initialized
-    - shell:
-        cmd: terraform init
-        chdir: "terraform/logging"
-      when: terraform_initialized.stat.exists != true
-    - name: Plan Deployment
-      terraform:
-        project_path: terraform/logging
-        state: planned
-        plan_file: plan.out
-      register: terraform_plan
-    - name: Apply Deployment
-      terraform:
-        project_path: terraform/logging
-        state: present
-        plan_file: plan.out
-      register: terraform_apply
-    - debug: msg="{{ terraform_apply.stdout }}"
+    - name: Deploy logging
+      import_tasks: logging.yml
     - name: Set up Loki output
       kubernetes.core.k8s:
         state: present
@@ -43,21 +31,42 @@
             namespace: logging
           spec:
             loki:
-              url: http://loki:3100
+              url: http://loki.monitoring:3100
               configure_kubernetes_labels: true
               buffer:
                 timekey: 1m
                 timekey_wait: 30s
                 timekey_use_utc: true
-    - name: copy files
-      copy: src="{{ item }}" dest="{{ item }}"
-      with_items:
-      - grafana.yml
-      - viz.values.yaml
-      - kustomization.yml
-    - name: Deploy grafana updates
-      shell: '/home/{{ ansible_user }}/.linkerd2/bin/linkerd viz install --values viz.values.yaml > viz.yml'
-    - shell: 'kubectl kustomize | kubectl apply -f -'
+    - name: Linkerd viz namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: linkerd-viz
+            annotations:
+              linkerd.io/inject: enabled
+    - name: Deploy Linkerd-viz
+      kubernetes.core.helm:
+        wait: true
+        chart_ref: linkerd-viz
+        name: linkerd-viz
+        # According to Linkerd documentation, separate Grafana is only supported in edge
+        # The feature will be enabled in the upcoming linkerd release 2.12
+        # https://linkerd.io/2.11/tasks/grafana/
+        chart_repo_url: https://helm.linkerd.io/edge
+        release_namespace: linkerd-viz
+        release_values:
+          jaegerUrl: jaeger.linkerd-jaeger:16686
+          prometheusUrl: http://metrics-kube-prometheus-st-prometheus.monitoring:9090
+          grafanaUrl: 'metrics-grafana.monitoring:80'
+          # Since we're bringing our own Prometheus and Grafana instances,
+          # We have to disable linkerd's Grafana and Prometheus instances
+          prometheus:
+            enabled: false
+          grafana:
+            enabled: false
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
     KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"

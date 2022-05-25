@@ -1,4 +1,0 @@
-jaegerUrl: jaeger.linkerd-jaeger:16686
-prometheusUrl: http://metrics-kube-prometheus-st-prometheus.linkerd-viz:9090
-prometheus:
-  enabled: false
