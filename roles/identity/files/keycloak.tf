@@ -118,4 +118,14 @@ resource "helm_release" "rel_keycloak" {
         name = "postgresql.primary.podAnnotations.vault\\.security\\.banzaicloud\\.io/vault-role"
         value = "identity"
     }
+
+    set {
+      name = "serviceMonitor.enabled"
+      value = "true"
+    }
+
+    set {
+      name = "prometheusRule.enabled"
+      value = "true"
+    }
 }

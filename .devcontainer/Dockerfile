@@ -24,5 +24,7 @@ RUN apk add --no-cache openssl
 
 USER vscode
 
+RUN helm plugin install https://github.com/databus23/helm-diff
+
 RUN  ansible-galaxy collection install kubernetes.core \
     && ansible-galaxy collection install community.general

@@ -71,6 +71,10 @@ mariadb:
       vault.security.banzaicloud.io/vault-role: files
     persistence:
       storageClass: nfs-client
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
 redis:
   enabled: yes
   auth:

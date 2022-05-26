@@ -56,7 +56,7 @@
             enabled: true
             org_role: Editor
           auth.basic:
-            enabled: false
+            enabled: true
           analytics:
             check_for_updates: false
           panels:
@@ -88,6 +88,11 @@
 
         dashboards:
           default:
+            # Logging dashboard - https://grafana.com/grafana/dashboards/7752
+            logging:
+              gnetId: 7752
+              revision: 5
+              datasource: prometheus
             # all these charts are hosted at https://grafana.com/grafana/dashboards/{id}
             top-line:
               gnetId: 15474

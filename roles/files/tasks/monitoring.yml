@@ -9,8 +9,14 @@
         name: files-logger
         namespace: files
       spec:
-        fluentd: {}
-        fluentbit: {}
+        fluentd:
+          metrics:
+            serviceMonitor: true
+            prometheusRules: true
+        fluentbit:
+          metrics:
+            serviceMonitor: true
+            prometheusRules: true
         controlNamespace: logging
 - name: Create Flow resource
   kubernetes.core.k8s:

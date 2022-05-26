@@ -5,31 +5,40 @@
     state: directory
     mode: 0755
 - name: Deploy Vault Operator
-  block:
-    - copy: src="{{ item }}" dest="/home/{{ ansible_user }}/terraform/vault/{{ item }}"
-      with_items:
-      - vault.tf
-      - terraform.tf
-    - stat:
-        path: "terraform/vault/.terraform"
-      register: terraform_initialized
-    - shell:
-        cmd: terraform init
-        chdir: "terraform/vault"
-      when: terraform_initialized.stat.exists != true
-    - name: Plan Deployment
-      terraform:
-        project_path: terraform/vault
-        state: planned
-        plan_file: plan.out
-    - name: Apply Deployment
-      terraform:
-        project_path: terraform/vault
-        state: present
-        plan_file: plan.out
   environment:
     KUBECONFIG: "/home/{{ ansible_user }}/kubeconfig"
     KUBE_CONFIG_PATH: "/home/{{ ansible_user }}/kubeconfig"
+  block:
+    - name: Deploy Namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: vault-system
+            annotations:
+              linkerd.io/inject: enabled
+    - name: Deploy Operator chart
+      kubernetes.core.helm:
+        wait: true
+        chart_ref: vault-operator
+        name: vault-operator
+        chart_repo_url: https://kubernetes-charts.banzaicloud.com
+        release_namespace: vault-system
+    - name: Deploy Webhook chart
+      kubernetes.core.helm:
+        wait: true
+        chart_ref: vault-secrets-webhook
+        name: vault-secrets-webhook
+        chart_repo_url: https://kubernetes-charts.banzaicloud.com
+        release_namespace: vault-system
+        release_values:
+          certificate:
+            generate: false
+            useCertManager: true
+          image:
+            tag: 1.15.2
 - import_tasks: vault.yml
 - import_tasks: monitoring.yml
 - name: Get certificate from secret

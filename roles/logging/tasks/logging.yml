@@ -9,6 +9,9 @@
     chart_repo_url: https://kubernetes-charts.banzaicloud.com
     release_namespace: logging
     create_namespace: true
+    release_values:
+      serviceMonitor:
+        enabled: true
 - name: Deploy Loki
   kubernetes.core.helm:
     wait: true
