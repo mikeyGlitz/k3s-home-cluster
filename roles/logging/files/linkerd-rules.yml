@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: linkerd-rules
+  namespace: monitoring
+spec:
+  groups:
+    - name: linkerd-rules
+      rules:
+        - record: deployment:error_rate_1m
+          expr: |
+            sum(rate(response_total{classification="failure", direction="inbound"}[1m])) by (deployment)
+            /
+            sum(rate(response_total{ direction="inbound"}[1m])) by (deployment)
+        - alert: HighErrorRate
+          expr: |
+            deployment:error_rate_1m >= 0.01
+          annotations:
+            message: |
+              The error rate for deployment {{ $labels.deployment }} has been high for 5 minutes. The current value is {{ $value |   humanizePercentage }}.
+            summary: High Error Rate
+          for: 5m
+          labels:
+            severity: critical

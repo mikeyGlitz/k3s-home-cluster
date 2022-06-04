@@ -99,7 +99,7 @@
             issuerRef:
               name: cluster-issuer
               kind: ClusterIssuer
-    - name: Create keycloak issuer
+    - name: Create files issuer
       kubernetes.core.k8s:
         state: present
         definition:

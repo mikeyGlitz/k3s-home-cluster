@@ -51,7 +51,7 @@
           server:
             root_url: '%(protocol)s://%(domain)s:/grafana/'
           auth:
-            disable_login_form: true
+            disable_login_form: false
           auth.anonymous:
             enabled: true
             org_role: Editor
@@ -186,11 +186,38 @@
               manageAlerts: true
               alertmanagerUid: alertmanager
       alertmanager:
+        config:
+          global:
+            resolve_timeout: 5m
+          route:
+            group_by: ['job']
+            group_wait: 15s
+            group_interval: 5m
+            repeat_interval: 12h
+            receiver: 'null'
+            routes:
+              - group_by: ['alertname']
+                group_wait: 15s
+                group_interval: 10s
+                repeat_interval: 12h
+                matchers:
+                  - severity="critical"
+                receiver: email
+          receivers:
+            - name: 'null'
+            - name: email
+              email_configs: "{{ lookup('template', 'emailConfigs.yml.j2') | from_yaml }}"
+          templates:
+            - '/etc/alertmanager/config/*.tmpl'
         alertmanagerSpec:
           externalUrl: https://monitoring.haus.net/alarms
           logFormat: json
-          alertmanagerConfiguration:
-            name: global-config
+          alertmanagerConfigNamespaceSelector:
+            matchLabels:
+              alertmanagerconfig: enabled
+          alertmanagerConfigSelector:
+            matchLabels:
+              role: alertmanager-config
       prometheus:
         prometheusSpec:
           evaluationInterval: 10s
@@ -212,27 +239,10 @@
               kind: Issuer
   environment:
     <<: *env
-- name: Deploy Alertmanager Config
+- name: Deploy Linkerd prometheus rules
   environment:
     <<: *env
   kubernetes.core.k8s:
     state: present
-    definition:
-      kind: AlertmanagerConfig
-      apiVersion: monitoring.coreos.com/v1alpha1
-      metadata:
-        name: global-config
-        namespace: monitoring
-      spec:
-        route:
-          groupBy: ['alertName']
-          groupWait: 10s
-          groupInterval: 10s
-          repeatInterval: 12h
-          receiver: email
-          # matchers:
-          #   - name: severity
-          #     value: critical
-        receivers:
-          - name: email
-            emailConfigs: "{{ lookup('template', 'emailConfigs.yml.j2') | from_yaml }}"
+    definition: "{{ lookup('file', 'linkerd-rules.yml') | from_yaml }}"
+
